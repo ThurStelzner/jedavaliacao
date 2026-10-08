@@ -1,10 +1,5 @@
 import type { Entrevista } from "./types";
 
-export interface Gargalo {
-  texto: string;
-  quantidade: number;
-}
-
 export interface Stats {
   total: number;
   realizadas: number;
@@ -17,34 +12,8 @@ export interface Stats {
   outroProblema: number;
   percOutroProblema: number;
   indicacoes: number;
-  tempoMedioHoras: number | null;
-  mediaCurriculos: number | null;
-  percMediaExperiencia: number | null;
-  gargalos: Gargalo[];
   porStatus: Array<{ status: string; total: number }>;
   porPorte: Array<{ porte: string; total: number }>;
-}
-
-function numeros(texto: string): number[] {
-  if (!texto) return [];
-  const matches = texto.replace(/\.(?=\d{3}\b)/g, "").match(/\d+(?:[.,]\d+)?/g);
-  if (!matches) return [];
-  return matches.map((m) => parseFloat(m.replace(",", "."))).filter((n) => !isNaN(n));
-}
-
-function media(valores: number[]): number | null {
-  if (valores.length === 0) return null;
-  return valores.reduce((a, b) => a + b, 0) / valores.length;
-}
-
-function arredonda(n: number | null, casas = 1): number | null {
-  if (n === null) return null;
-  const f = Math.pow(10, casas);
-  return Math.round(n * f) / f;
-}
-
-function respostaDe(e: Entrevista, perguntaId: string): string {
-  return e.respostas.find((r) => r.perguntaId === perguntaId)?.resposta ?? "";
 }
 
 export function calcStats(entrevistas: Entrevista[]): Stats {
@@ -68,23 +37,6 @@ export function calcStats(entrevistas: Entrevista[]): Stats {
     (acc, e) => acc + e.indicacoes.filter((i) => i.trim()).length,
     0,
   );
-
-  const tempo = realizadas.flatMap((e) => numeros(respostaDe(e, "q3")));
-  const curriculos = realizadas.flatMap((e) => numeros(respostaDe(e, "q5")));
-  const experiencia = realizadas
-    .flatMap((e) => numeros(respostaDe(e, "q7")))
-    .map((n) => (n <= 1 ? n * 100 : n));
-
-  const contagemGargalos = new Map<string, number>();
-  for (const e of realizadas) {
-    const g = respostaDe(e, "q2").trim();
-    if (!g) continue;
-    const key = g.toLowerCase();
-    contagemGargalos.set(key, (contagemGargalos.get(key) ?? 0) + 1);
-  }
-  const gargalos: Gargalo[] = Array.from(contagemGargalos.entries())
-    .map(([texto, quantidade]) => ({ texto, quantidade }))
-    .sort((a, b) => b.quantidade - a.quantidade);
 
   const statusCount = new Map<string, number>();
   for (const e of entrevistas) {
@@ -111,10 +63,6 @@ export function calcStats(entrevistas: Entrevista[]): Stats {
     outroProblema: comOutro.length,
     percOutroProblema: realizadas.length ? Math.round((comOutro.length / totalRealizadas) * 100) : 0,
     indicacoes,
-    tempoMedioHoras: arredonda(media(tempo)),
-    mediaCurriculos: arredonda(media(curriculos), 0),
-    percMediaExperiencia: arredonda(media(experiencia), 0),
-    gargalos,
     porStatus: ["planejada", "agendada", "realizada"].map((s) => ({
       status: s,
       total: statusCount.get(s) ?? 0,

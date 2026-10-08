@@ -99,7 +99,9 @@ const inputClass =
   "w-full rounded-inputs border border-transparent bg-canvas px-2.5 py-2 text-body text-ink outline-none transition-colors placeholder:text-mid-gray focus:border-hairline focus:bg-paper";
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`${inputClass} ${props.className ?? ""}`} />;
+  return (
+    <input {...props} className={`${inputClass} h-10 ${props.className ?? ""}`} />
+  );
 }
 
 export function Textarea(
@@ -108,13 +110,15 @@ export function Textarea(
   return (
     <textarea
       {...props}
-      className={`${inputClass} min-h-20 ${props.className ?? ""}`}
+      className={`${inputClass} min-h-20 max-h-60 resize-y ${props.className ?? ""}`}
     />
   );
 }
 
 export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={`${inputClass} ${props.className ?? ""}`} />;
+  return (
+    <select {...props} className={`${inputClass} h-10 ${props.className ?? ""}`} />
+  );
 }
 
 export function Badge({

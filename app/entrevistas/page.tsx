@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { apiCreate, apiDelete, apiList, apiUpdate } from "@/lib/api";
-import { AREAS, PERGUNTAS, PORTES } from "@/lib/questions";
-import type { Entrevista, StatusEntrevista } from "@/lib/types";
+import { AREAS, PORTES } from "@/lib/questions";
+import type { Entrevista, Pergunta, StatusEntrevista } from "@/lib/types";
 import {
   Badge,
   Button,
@@ -37,7 +37,7 @@ function vazio(): Entrevista {
     status: "planejada",
     gravacao: "",
     anotacoes: "",
-    respostas: PERGUNTAS.map((p) => ({ perguntaId: p.id, resposta: "" })),
+    respostas: [],
     indicacoes: ["", ""],
     identificouProblema: false,
     outroProblema: "",
@@ -47,6 +47,7 @@ function vazio(): Entrevista {
 
 export default function EntrevistasPage() {
   const [lista, setLista] = useState<Entrevista[]>([]);
+  const [perguntas, setPerguntas] = useState<Pergunta[]>([]);
   const [form, setForm] = useState<Entrevista>(vazio());
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
@@ -54,7 +55,12 @@ export default function EntrevistasPage() {
   const [salvando, setSalvando] = useState(false);
 
   async function carregar() {
-    setLista(await apiList<Entrevista>("entrevistas"));
+    const [entrevistas, perguntasCarregadas] = await Promise.all([
+      apiList<Entrevista>("entrevistas"),
+      apiList<Pergunta>("perguntas"),
+    ]);
+    setLista(entrevistas);
+    setPerguntas(perguntasCarregadas);
   }
 
   useEffect(() => {
@@ -68,24 +74,23 @@ export default function EntrevistasPage() {
   }
 
   function editar(e: Entrevista) {
-    setForm({
-      ...e,
-      respostas: PERGUNTAS.map((p) => ({
-        perguntaId: p.id,
-        resposta: e.respostas.find((r) => r.perguntaId === p.id)?.resposta ?? "",
-      })),
-    });
+    setForm(e);
     setEditandoId(e.id);
     setMostrarForm(true);
   }
 
   function setResposta(perguntaId: string, resposta: string) {
-    setForm((f) => ({
-      ...f,
-      respostas: f.respostas.map((r) =>
-        r.perguntaId === perguntaId ? { ...r, resposta } : r,
-      ),
-    }));
+    setForm((f) => {
+      const existe = f.respostas.some((r) => r.perguntaId === perguntaId);
+      return {
+        ...f,
+        respostas: existe
+          ? f.respostas.map((r) =>
+              r.perguntaId === perguntaId ? { ...r, resposta } : r,
+            )
+          : [...f.respostas, { perguntaId, resposta }],
+      };
+    });
   }
 
   function setIndicacao(idx: number, valor: string) {
@@ -212,26 +217,22 @@ export default function EntrevistasPage() {
           </div>
 
           <div className="mt-4">
-            <Field
-              label="Pergunta 1 (aberta)"
-              hint="Não induza. Deixe o entrevistado falar livremente."
-            >
-              <Textarea
-                value={form.respostas[0]?.resposta ?? ""}
-                onChange={(e) => setResposta("q1", e.target.value)}
-              />
-            </Field>
-          </div>
-
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {PERGUNTAS.slice(1).map((p) => (
-              <Field key={p.id} label={`${p.ordem}. ${p.texto}`}>
-                <Textarea
-                  value={form.respostas.find((r) => r.perguntaId === p.id)?.resposta ?? ""}
-                  onChange={(e) => setResposta(p.id, e.target.value)}
-                />
-              </Field>
-            ))}
+            {perguntas.length === 0 ? (
+              <EmptyState>
+                Nenhuma pergunta cadastrada. Monte o roteiro na página "Perguntas".
+              </EmptyState>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {perguntas.map((p, i) => (
+                  <Field key={p.id} label={`${i + 1}. ${p.texto}`}>
+                    <Textarea
+                      value={form.respostas.find((r) => r.perguntaId === p.id)?.resposta ?? ""}
+                      onChange={(e) => setResposta(p.id, e.target.value)}
+                    />
+                  </Field>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mt-4">
@@ -354,12 +355,12 @@ export default function EntrevistasPage() {
 
               {aberto === e.id && (
                 <div className="mt-4 space-y-3 border-t border-hairline pt-4">
-                  {PERGUNTAS.map((p) => {
+                  {perguntas.map((p, i) => {
                     const r = e.respostas.find((x) => x.perguntaId === p.id)?.resposta;
                     return (
                       <div key={p.id} className="text-sm">
                         <p className="font-medium text-ink">
-                          {p.ordem}. {p.texto}
+                          {i + 1}. {p.texto}
                         </p>
                         <p className="mt-0.5 text-ink-soft">
                           {r || <span className="text-mid-gray">— sem resposta —</span>}
@@ -367,6 +368,18 @@ export default function EntrevistasPage() {
                       </div>
                     );
                   })}
+                  {e.respostas
+                    .filter(
+                      (r) =>
+                        !perguntas.some((p) => p.id === r.perguntaId) &&
+                        r.resposta.trim(),
+                    )
+                    .map((r) => (
+                      <div key={r.perguntaId} className="text-sm">
+                        <p className="font-medium text-ink">Pergunta removida</p>
+                        <p className="mt-0.5 text-ink-soft">{r.resposta}</p>
+                      </div>
+                    ))}
                   {e.anotacoes && (
                     <div className="text-sm">
                       <p className="font-medium text-ink">Anotações</p>

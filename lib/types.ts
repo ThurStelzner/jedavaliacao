@@ -1,12 +1,6 @@
 export type StatusEntrevista = "planejada" | "agendada" | "realizada";
 export type Prioridade = "baixa" | "media" | "alta";
 export type StatusTarefa = "pendente" | "em_andamento" | "concluida";
-export type StatusContato =
-  | "novo"
-  | "contatado"
-  | "agendado"
-  | "entrevistado"
-  | "sem_interesse";
 export type TipoLembrete = "critico" | "atencao";
 export type TipoDescoberta =
   | "novo_problema"
@@ -19,6 +13,12 @@ export type TipoDescoberta =
 export interface Resposta {
   perguntaId: string;
   resposta: string;
+}
+
+export interface Pergunta {
+  id: string;
+  texto: string;
+  createdAt: string;
 }
 
 export interface Entrevista {
@@ -37,21 +37,6 @@ export interface Entrevista {
   indicacoes: string[];
   identificouProblema: boolean;
   outroProblema: string;
-  createdAt: string;
-}
-
-export interface Contato {
-  id: string;
-  nome: string;
-  empresa: string;
-  cargo: string;
-  porte: string;
-  area: string;
-  quemIndicou: string;
-  contato: string;
-  status: StatusContato;
-  entrevistaRealizada: boolean;
-  novasIndicacoes: string;
   createdAt: string;
 }
 
@@ -84,7 +69,7 @@ export interface Descoberta {
 
 export interface DB {
   entrevistas: Entrevista[];
-  contatos: Contato[];
+  perguntas: Pergunta[];
   tarefas: Tarefa[];
   lembretes: Lembrete[];
   descobertas: Descoberta[];

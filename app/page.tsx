@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import { apiList } from "@/lib/api";
 import { calcStats, proximosPassos } from "@/lib/stats";
-import type { Contato, Entrevista, Lembrete, Tarefa } from "@/lib/types";
+import type { Entrevista, Lembrete, Tarefa } from "@/lib/types";
 import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
 
 const CORES_STATUS: Record<string, string> = {
@@ -39,21 +39,18 @@ export default function DashboardPage() {
   const [entrevistas, setEntrevistas] = useState<Entrevista[]>([]);
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [lembretes, setLembretes] = useState<Lembrete[]>([]);
-  const [contatos, setContatos] = useState<Contato[]>([]);
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
     async function carregar() {
-      const [e, t, l, c] = await Promise.all([
+      const [e, t, l] = await Promise.all([
         apiList<Entrevista>("entrevistas"),
         apiList<Tarefa>("tarefas"),
         apiList<Lembrete>("lembretes"),
-        apiList<Contato>("contatos"),
       ]);
       setEntrevistas(e);
       setTarefas(t);
       setLembretes(l);
-      setContatos(c);
       setCarregando(false);
     }
     carregar();
@@ -63,9 +60,6 @@ export default function DashboardPage() {
   const passos = useMemo(() => proximosPassos(stats), [stats]);
 
   const tarefasPendentes = tarefas.filter((t) => t.status !== "concluida").length;
-  const contatosDisponiveis = contatos.filter(
-    (c) => c.status !== "entrevistado" && c.status !== "sem_interesse",
-  ).length;
   const lembretesAtivos = lembretes.filter((l) => l.ativo);
 
   const dadosStatus = stats.porStatus.map((s) => ({
@@ -102,7 +96,6 @@ export default function DashboardPage() {
         <Stat label="Indicações obtidas" value={String(stats.indicacoes)} />
         <Stat label="Identificaram o problema" value={`${stats.percIdentificaram}%`} />
         <Stat label="Apontaram outro problema" value={`${stats.percOutroProblema}%`} />
-        <Stat label="Contatos disponíveis" value={String(contatosDisponiveis)} />
         <Stat label="Tarefas pendentes" value={String(tarefasPendentes)} />
       </div>
 
@@ -169,57 +162,6 @@ export default function DashboardPage() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          )}
-        </Card>
-      </div>
-
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <h2 className="mb-4 text-sm font-semibold text-ink">
-            Médias dos processos seletivos
-          </h2>
-          <ul className="text-sm">
-            <li className="flex items-center justify-between gap-3 border-b border-hairline py-2.5 first:pt-0">
-              <span className="text-mid-gray">Tempo médio do processo seletivo</span>
-              <strong className="font-medium text-ink">
-                {stats.tempoMedioHoras !== null ? `${stats.tempoMedioHoras} h` : "—"}
-              </strong>
-            </li>
-            <li className="flex items-center justify-between gap-3 border-b border-hairline py-2.5">
-              <span className="text-mid-gray">Currículos por abertura de vaga</span>
-              <strong className="font-medium text-ink">
-                {stats.mediaCurriculos !== null ? stats.mediaCurriculos : "—"}
-              </strong>
-            </li>
-            <li className="flex items-center justify-between gap-3 py-2.5 last:pb-0">
-              <span className="text-mid-gray">Passam do período de experiência</span>
-              <strong className="font-medium text-ink">
-                {stats.percMediaExperiencia !== null
-                  ? `${stats.percMediaExperiencia}%`
-                  : "—"}
-              </strong>
-            </li>
-          </ul>
-        </Card>
-
-        <Card>
-          <h2 className="mb-4 text-sm font-semibold text-ink">
-            Principais gargalos (pergunta 2)
-          </h2>
-          {stats.gargalos.length === 0 ? (
-            <EmptyState>Ainda sem gargalos registrados.</EmptyState>
-          ) : (
-            <ul className="text-sm">
-              {stats.gargalos.map((g, i) => (
-                <li
-                  key={i}
-                  className="flex items-center justify-between gap-3 border-b border-hairline py-2.5 first:pt-0 last:border-0 last:pb-0"
-                >
-                  <span className="text-ink-soft">{g.texto}</span>
-                  <Badge variant="soft">{g.quantidade}x</Badge>
-                </li>
-              ))}
-            </ul>
           )}
         </Card>
       </div>

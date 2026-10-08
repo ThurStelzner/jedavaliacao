@@ -1,10 +1,10 @@
 import { promises as fs } from "fs";
 import path from "path";
-import type { Contato, DB, Descoberta, Entrevista, Lembrete, Tarefa } from "./types";
+import type { DB, Descoberta, Entrevista, Lembrete, Tarefa } from "./types";
 
 export const COLLECTIONS = [
   "entrevistas",
-  "contatos",
+  "perguntas",
   "tarefas",
   "lembretes",
   "descobertas",
@@ -17,52 +17,6 @@ const DB_PATH = path.join(DATA_DIR, "db.json");
 
 const uid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
-
-function contato(
-  nome: string,
-  cargo: string,
-  quemIndicou: string,
-  extra: Partial<Contato> = {},
-): Contato {
-  return {
-    id: uid(),
-    nome,
-    empresa: "",
-    cargo,
-    porte: "",
-    area: "",
-    quemIndicou,
-    contato: "",
-    status: "novo",
-    entrevistaRealizada: false,
-    novasIndicacoes: "",
-    createdAt: now(),
-    ...extra,
-  };
-}
-
-function seedContatos(): Contato[] {
-  const list: Contato[] = [
-    contato("Gerente de RH", "Gerente de RH", "Arthur"),
-    contato("Professor(a) de Gestão de Pessoas", "Professor(a)", "Indicação"),
-    contato("Profissional de RH 1", "RH", "SENAI", { empresa: "SENAI" }),
-    contato("Profissional de RH 2", "RH", "SENAI", { empresa: "SENAI" }),
-    contato("Roger", "Mentor", "Mentores"),
-    contato("Professor(a) SENAI 1", "Professor(a)", "SENAI", { empresa: "SENAI" }),
-    contato("Professor(a) SENAI 2", "Professor(a)", "SENAI", { empresa: "SENAI" }),
-    contato("Professor(a) SENAI 3", "Professor(a)", "SENAI", { empresa: "SENAI" }),
-    contato("Yago", "Oficina", "Equipe"),
-    contato("Enzo", "Oficina", "Equipe"),
-    contato("Oficina (contato 3)", "Oficina", "Equipe"),
-    contato("Oficina (contato 4)", "Oficina", "Equipe"),
-    contato("Anthony", "Empresário", "Anthony"),
-    contato("Empresário (contato 2)", "Empresário", "Anthony"),
-  ];
-  for (let i = 1; i <= 5; i++) {
-    list.push(contato(`Contato de mentor ${i}`, "Indicação de mentor", "Mentores"));
-  }
-  return list;
-}
 
 function seedTarefas(): Tarefa[] {
   const titulos = [
@@ -121,7 +75,7 @@ function seedEntrevistas(): Entrevista[] {
 function seedDB(): DB {
   return {
     entrevistas: seedEntrevistas(),
-    contatos: seedContatos(),
+    perguntas: [],
     tarefas: seedTarefas(),
     lembretes: seedLembretes(),
     descobertas: seedDescobertas(),
@@ -131,7 +85,14 @@ function seedDB(): DB {
 export async function readDB(): Promise<DB> {
   try {
     const raw = await fs.readFile(DB_PATH, "utf8");
-    return JSON.parse(raw) as DB;
+    const db = JSON.parse(raw) as Partial<DB>;
+    return {
+      entrevistas: db.entrevistas ?? [],
+      perguntas: db.perguntas ?? [],
+      tarefas: db.tarefas ?? [],
+      lembretes: db.lembretes ?? [],
+      descobertas: db.descobertas ?? [],
+    };
   } catch {
     const db = seedDB();
     await writeDB(db);
