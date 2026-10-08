@@ -88,7 +88,7 @@ export default function ContatosPage() {
   return (
     <div>
       <PageHeader
-        title="👥 Contatos"
+        title="Contatos"
         subtitle={`${lista.length} contato(s) · ${disponiveis} disponível(is)`}
         right={<Button onClick={() => setMostrarForm((v) => !v)}>+ Novo contato</Button>}
       />

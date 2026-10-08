@@ -125,7 +125,7 @@ export default function EntrevistasPage() {
   return (
     <div>
       <PageHeader
-        title="🎤 Entrevistas"
+        title="Entrevistas"
         subtitle={`${lista.length} entrevista(s) cadastrada(s)`}
         right={<Button onClick={novo}>+ Nova entrevista</Button>}
       />

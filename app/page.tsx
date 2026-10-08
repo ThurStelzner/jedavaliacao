@@ -73,7 +73,7 @@ export default function DashboardPage() {
   return (
     <div>
       <PageHeader
-        title="🏠 Dashboard"
+        title="Dashboard"
         subtitle="Visão geral da validação do problema"
       />
 
@@ -141,7 +141,7 @@ export default function DashboardPage() {
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <Card>
           <h2 className="mb-3 text-sm font-semibold text-slate-700">
-            📊 Médias dos processos seletivos
+            Médias dos processos seletivos
           </h2>
           <ul className="space-y-2 text-sm text-slate-700">
             <li className="flex justify-between border-b border-slate-100 pb-1">
@@ -167,7 +167,7 @@ export default function DashboardPage() {
 
         <Card>
           <h2 className="mb-3 text-sm font-semibold text-slate-700">
-            🔎 Principais gargalos (pergunta 2)
+            Principais gargalos (pergunta 2)
           </h2>
           {stats.gargalos.length === 0 ? (
             <EmptyState>Ainda sem gargalos registrados.</EmptyState>
@@ -186,7 +186,7 @@ export default function DashboardPage() {
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">🧭 Próximos passos</h2>
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">Próximos passos</h2>
           <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-700">
             {passos.map((p, i) => (
               <li key={i}>{p}</li>
@@ -195,14 +195,14 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">🚨 Lembretes importantes</h2>
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">Lembretes importantes</h2>
           {lembretesAtivos.length === 0 ? (
             <EmptyState>Nenhum lembrete ativo.</EmptyState>
           ) : (
             <ul className="space-y-2 text-sm">
               {lembretesAtivos.map((l) => (
                 <li key={l.id} className="flex items-start gap-2">
-                  <span>{l.tipo === "critico" ? "🔴" : "🟡"}</span>
+                  <span>{l.tipo === "critico" ? "Crítico" : "Atenção"}</span>
                   <span className="text-slate-700">{l.texto}</span>
                 </li>
               ))}

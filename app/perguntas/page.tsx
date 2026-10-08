@@ -5,7 +5,7 @@ export default function PerguntasPage() {
   return (
     <div>
       <PageHeader
-        title="❓ Perguntas"
+        title="Perguntas"
         subtitle="Roteiro fixo para manter a entrevista organizada e no objetivo"
         right={
           <a
@@ -19,7 +19,7 @@ export default function PerguntasPage() {
 
       <Card className="mb-4 border-l-4 border-l-red-500">
         <p className="text-sm text-slate-700">
-          🔴 <strong>Não induza a resposta.</strong> A primeira pergunta é aberta de propósito:
+          <strong>Não induza a resposta.</strong> A primeira pergunta é aberta de propósito:
           deixe o entrevistado descrever o processo com as próprias palavras antes de
           aprofundar.
         </p>
@@ -48,7 +48,7 @@ export default function PerguntasPage() {
 
       <Card className="mt-4 border-l-4 border-l-yellow-400">
         <p className="text-sm text-slate-700">
-          🟡 Ao final, sempre pedir <strong>2 indicações</strong>. Se não conseguir 2, conseguir pelo
+          Ao final, sempre pedir <strong>2 indicações</strong>. Se não conseguir 2, conseguir pelo
           menos 1.
         </p>
       </Card>

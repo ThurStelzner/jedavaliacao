@@ -70,7 +70,7 @@ export default function TarefasPage() {
   return (
     <div>
       <PageHeader
-        title="📌 Tarefas"
+        title="Tarefas"
         subtitle={`${concluidas}/${lista.length} concluída(s)`}
         right={<Button onClick={() => setMostrarForm((v) => !v)}>+ Nova tarefa</Button>}
       />

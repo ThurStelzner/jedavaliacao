@@ -57,7 +57,7 @@ export default function LembretesPage() {
   return (
     <div>
       <PageHeader
-        title="🚨 Lembretes"
+        title="Lembretes"
         subtitle={`${ativos.length} lembrete(s) ativo(s)`}
       />
 
@@ -76,8 +76,8 @@ export default function LembretesPage() {
               value={form.tipo}
               onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoLembrete })}
             >
-              <option value="critico">🔴 Crítico</option>
-              <option value="atencao">🟡 Atenção</option>
+              <option value="critico">Crítico</option>
+              <option value="atencao">Atenção</option>
             </Select>
           </Field>
         </div>
@@ -98,7 +98,6 @@ export default function LembretesPage() {
               } ${l.ativo ? "" : "opacity-50"}`}
             >
               <div className="flex items-center gap-3">
-                <span>{l.tipo === "critico" ? "🔴" : "🟡"}</span>
                 <p className="flex-1 text-sm text-slate-800">{l.texto}</p>
                 <Button variant="ghost" onClick={() => alternar(l)}>
                   {l.ativo ? "Desativar" : "Ativar"}

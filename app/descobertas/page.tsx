@@ -66,7 +66,7 @@ export default function DescobertasPage() {
   return (
     <div>
       <PageHeader
-        title="🗂️ Descobertas"
+        title="Descobertas"
         subtitle="Novos problemas, padrões e oportunidades que surgirem nas entrevistas"
       />
 
