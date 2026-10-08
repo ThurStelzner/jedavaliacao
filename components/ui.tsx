@@ -10,7 +10,9 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm ${className}`}>
+    <div
+      className={`rounded-cards border border-hairline bg-paper p-5 shadow-subtle ${className}`}
+    >
       {children}
     </div>
   );
@@ -26,12 +28,16 @@ export function PageHeader({
   right?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex items-start justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-        {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
+    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        <h1 className="text-heading-sm font-semibold text-ink md:text-heading">
+          {title}
+        </h1>
+        {subtitle && <p className="mt-1.5 text-body text-mid-gray">{subtitle}</p>}
       </div>
-      {right}
+      {right && (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">{right}</div>
+      )}
     </div>
   );
 }
@@ -47,16 +53,17 @@ export function Button({
   children: ReactNode;
   onClick?: () => void;
   type?: "button" | "submit";
-  variant?: "primary" | "ghost" | "danger";
+  variant?: "primary" | "ghost" | "outline" | "danger";
   disabled?: boolean;
   className?: string;
 }) {
   const base =
-    "inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50";
+    "inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-buttons px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mid-gray disabled:pointer-events-none disabled:opacity-50";
   const variants = {
-    primary: "bg-slate-900 text-white hover:bg-slate-700",
-    ghost: "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50",
-    danger: "bg-white text-red-600 border border-red-200 hover:bg-red-50",
+    primary: "bg-ink text-[#fafafa] hover:bg-ink-soft",
+    ghost: "bg-canvas text-ink hover:bg-hairline",
+    outline: "border border-hairline bg-transparent text-ink hover:bg-canvas",
+    danger: "border border-hairline bg-transparent text-ember hover:bg-canvas",
   };
   return (
     <button
@@ -80,16 +87,16 @@ export function Field({
   hint?: string;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="font-medium text-slate-700">{label}</span>
+    <label className="flex flex-col gap-1.5 text-sm">
+      <span className="font-medium text-ink">{label}</span>
       {children}
-      {hint && <span className="text-xs text-slate-400">{hint}</span>}
+      {hint && <span className="text-caption text-mid-gray">{hint}</span>}
     </label>
   );
 }
 
 const inputClass =
-  "rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900";
+  "w-full rounded-inputs border border-transparent bg-canvas px-2.5 py-2 text-body text-ink outline-none transition-colors placeholder:text-mid-gray focus:border-hairline focus:bg-paper";
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${inputClass} ${props.className ?? ""}`} />;
@@ -101,7 +108,7 @@ export function Textarea(
   return (
     <textarea
       {...props}
-      className={`${inputClass} min-h-[80px] ${props.className ?? ""}`}
+      className={`${inputClass} min-h-20 ${props.className ?? ""}`}
     />
   );
 }
@@ -112,29 +119,36 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 
 export function Badge({
   children,
-  color = "slate",
+  variant = "soft",
 }: {
   children: ReactNode;
-  color?: "slate" | "green" | "yellow" | "red" | "blue";
+  variant?: "solid" | "soft" | "outline";
 }) {
-  const colors = {
-    slate: "bg-slate-100 text-slate-700",
-    green: "bg-green-100 text-green-700",
-    yellow: "bg-yellow-100 text-yellow-800",
-    red: "bg-red-100 text-red-700",
-    blue: "bg-blue-100 text-blue-700",
+  const base =
+    "inline-flex items-center whitespace-nowrap rounded-badges px-2 py-0.5 text-caption font-medium";
+  const variants = {
+    solid: "bg-ink-soft text-[#fafafa]",
+    soft: "bg-canvas text-ink-soft",
+    outline: "border border-hairline bg-transparent text-ink",
   };
-  return (
-    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${colors[color]}`}>
-      {children}
-    </span>
-  );
+  return <span className={`${base} ${variants[variant]}`}>{children}</span>;
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-400">
+    <div className="rounded-cards border border-dashed border-hairline px-5 py-10 text-center text-body text-mid-gray">
       {children}
     </div>
+  );
+}
+
+export function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <Card>
+      <p className="text-caption font-medium uppercase text-mid-gray">{label}</p>
+      <p className="mt-2 text-heading font-semibold text-ink lg:text-heading-lg">
+        {value}
+      </p>
+    </Card>
   );
 }

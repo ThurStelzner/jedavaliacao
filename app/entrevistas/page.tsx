@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiCreate, apiDelete, apiList, apiUpdate } from "@/lib/api";
 import { AREAS, PERGUNTAS, PORTES } from "@/lib/questions";
-import type { Entrevista, Resposta, StatusEntrevista } from "@/lib/types";
+import type { Entrevista, StatusEntrevista } from "@/lib/types";
 import {
   Badge,
   Button,
@@ -18,10 +18,10 @@ import {
 
 const STATUS: StatusEntrevista[] = ["planejada", "agendada", "realizada"];
 
-const CORES_STATUS: Record<StatusEntrevista, "slate" | "yellow" | "green"> = {
-  planejada: "slate",
-  agendada: "yellow",
-  realizada: "green",
+const VARIANTES_STATUS: Record<StatusEntrevista, "soft" | "outline" | "solid"> = {
+  planejada: "soft",
+  agendada: "outline",
+  realizada: "solid",
 };
 
 function vazio(): Entrevista {
@@ -68,10 +68,13 @@ export default function EntrevistasPage() {
   }
 
   function editar(e: Entrevista) {
-    setForm({ ...e, respostas: PERGUNTAS.map((p) => ({
-      perguntaId: p.id,
-      resposta: e.respostas.find((r) => r.perguntaId === p.id)?.resposta ?? "",
-    })) });
+    setForm({
+      ...e,
+      respostas: PERGUNTAS.map((p) => ({
+        perguntaId: p.id,
+        resposta: e.respostas.find((r) => r.perguntaId === p.id)?.resposta ?? "",
+      })),
+    });
     setEditandoId(e.id);
     setMostrarForm(true);
   }
@@ -127,16 +130,16 @@ export default function EntrevistasPage() {
       <PageHeader
         title="Entrevistas"
         subtitle={`${lista.length} entrevista(s) cadastrada(s)`}
-        right={<Button onClick={novo}>+ Nova entrevista</Button>}
+        right={<Button onClick={novo}>Nova entrevista</Button>}
       />
 
       {mostrarForm && (
         <Card className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold text-slate-700">
+          <h2 className="mb-4 text-sm font-semibold text-ink">
             {editandoId ? "Editar entrevista" : "Nova entrevista"}
           </h2>
 
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Nome do entrevistado">
               <Input
                 value={form.nomeEntrevistado}
@@ -220,7 +223,7 @@ export default function EntrevistasPage() {
             </Field>
           </div>
 
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
             {PERGUNTAS.slice(1).map((p) => (
               <Field key={p.id} label={`${p.ordem}. ${p.texto}`}>
                 <Textarea
@@ -231,7 +234,7 @@ export default function EntrevistasPage() {
             ))}
           </div>
 
-          <div className="mt-3">
+          <div className="mt-4">
             <Field label="Observações / anotações">
               <Textarea
                 value={form.anotacoes}
@@ -240,7 +243,7 @@ export default function EntrevistasPage() {
             </Field>
           </div>
 
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
             <Field label="Indicação 1">
               <Input
                 value={form.indicacoes[0] ?? ""}
@@ -255,14 +258,15 @@ export default function EntrevistasPage() {
             </Field>
           </div>
 
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="flex items-center gap-2 text-sm text-ink-soft">
               <input
                 type="checkbox"
                 checked={form.identificouProblema}
                 onChange={(e) =>
                   setForm({ ...form, identificouProblema: e.target.checked })
                 }
+                className="h-4 w-4"
               />
               A empresa identificou o problema pesquisado?
             </label>
@@ -274,7 +278,7 @@ export default function EntrevistasPage() {
             </Field>
           </div>
 
-          <div className="mt-4 flex gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             <Button onClick={salvar} disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar"}
             </Button>
@@ -297,23 +301,27 @@ export default function EntrevistasPage() {
         <div className="space-y-3">
           {lista.map((e) => (
             <Card key={e.id}>
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold text-slate-900">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-body font-medium text-ink">
                     {e.nomeEntrevistado || "(sem nome)"}{" "}
-                    <span className="font-normal text-slate-500">
+                    <span className="font-normal text-mid-gray">
                       — {e.empresa || "empresa não informada"}
                     </span>
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="mt-0.5 text-caption text-mid-gray">
                     {e.cargo} · {e.area} · {e.porte} · {e.data || "sem data"}
                   </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <Badge color={CORES_STATUS[e.status]}>{e.status}</Badge>
-                    {e.identificouProblema && <Badge color="green">identificou o problema</Badge>}
-                    {e.outroProblema.trim() && <Badge color="red">outro problema</Badge>}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge variant={VARIANTES_STATUS[e.status]}>{e.status}</Badge>
+                    {e.identificouProblema && (
+                      <Badge variant="solid">identificou o problema</Badge>
+                    )}
+                    {e.outroProblema.trim() && (
+                      <Badge variant="outline">outro problema</Badge>
+                    )}
                     {e.indicacoes.filter((i) => i.trim()).length > 0 && (
-                      <Badge color="blue">
+                      <Badge variant="soft">
                         {e.indicacoes.filter((i) => i.trim()).length} indicação(ões)
                       </Badge>
                     )}
@@ -345,31 +353,33 @@ export default function EntrevistasPage() {
               </div>
 
               {aberto === e.id && (
-                <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                <div className="mt-4 space-y-3 border-t border-hairline pt-4">
                   {PERGUNTAS.map((p) => {
                     const r = e.respostas.find((x) => x.perguntaId === p.id)?.resposta;
                     return (
                       <div key={p.id} className="text-sm">
-                        <p className="font-medium text-slate-700">
+                        <p className="font-medium text-ink">
                           {p.ordem}. {p.texto}
                         </p>
-                        <p className="text-slate-600">{r || "— sem resposta —"}</p>
+                        <p className="mt-0.5 text-ink-soft">
+                          {r || <span className="text-mid-gray">— sem resposta —</span>}
+                        </p>
                       </div>
                     );
                   })}
                   {e.anotacoes && (
                     <div className="text-sm">
-                      <p className="font-medium text-slate-700">Anotações</p>
-                      <p className="text-slate-600">{e.anotacoes}</p>
+                      <p className="font-medium text-ink">Anotações</p>
+                      <p className="mt-0.5 text-ink-soft">{e.anotacoes}</p>
                     </div>
                   )}
                   {e.gravacao && (
-                    <p className="text-sm text-slate-600">Gravação: {e.gravacao}</p>
+                    <p className="text-sm text-mid-gray">Gravação: {e.gravacao}</p>
                   )}
                   {e.outroProblema.trim() && (
                     <div className="text-sm">
-                      <p className="font-medium text-red-600">Outro problema relatado</p>
-                      <p className="text-slate-600">{e.outroProblema}</p>
+                      <p className="font-medium text-ink">Outro problema relatado</p>
+                      <p className="mt-0.5 text-ink-soft">{e.outroProblema}</p>
                     </div>
                   )}
                 </div>

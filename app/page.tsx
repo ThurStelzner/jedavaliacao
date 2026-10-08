@@ -16,9 +16,24 @@ import {
 import { apiList } from "@/lib/api";
 import { calcStats, proximosPassos } from "@/lib/stats";
 import type { Contato, Entrevista, Lembrete, Tarefa } from "@/lib/types";
-import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
 
-const CORES = ["#64748b", "#eab308", "#22c55e", "#3b82f6", "#ef4444"];
+const CORES_STATUS: Record<string, string> = {
+  planejada: "#a3a3a3",
+  agendada: "#737373",
+  realizada: "#0a0a0a",
+};
+
+const tickStyle = { fill: "#737373", fontSize: 12 };
+const tooltipStyle = {
+  background: "#ffffff",
+  border: "1px solid #e5e5e5",
+  borderRadius: "10px",
+  boxShadow:
+    "0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)",
+  fontSize: 12,
+  color: "#0a0a0a",
+};
 
 export default function DashboardPage() {
   const [entrevistas, setEntrevistas] = useState<Entrevista[]>([]);
@@ -77,31 +92,45 @@ export default function DashboardPage() {
         subtitle="Visão geral da validação do problema"
       />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kpi titulo="Entrevistas realizadas" valor={`${stats.realizadas}/${stats.total}`} />
-        <Kpi titulo="Empresas entrevistadas" valor={String(stats.empresasEntrevistadas)} />
-        <Kpi titulo="RHs entrevistados" valor={String(stats.rhEntrevistados)} />
-        <Kpi titulo="Indicações obtidas" valor={String(stats.indicacoes)} />
-        <Kpi titulo="Identificaram o problema" valor={`${stats.percIdentificaram}%`} />
-        <Kpi titulo="Apontaram outro problema" valor={`${stats.percOutroProblema}%`} />
-        <Kpi titulo="Contatos disponíveis" valor={String(contatosDisponiveis)} />
-        <Kpi titulo="Tarefas pendentes" valor={String(tarefasPendentes)} />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <Stat
+          label="Entrevistas realizadas"
+          value={`${stats.realizadas}/${stats.total}`}
+        />
+        <Stat label="Empresas entrevistadas" value={String(stats.empresasEntrevistadas)} />
+        <Stat label="RHs entrevistados" value={String(stats.rhEntrevistados)} />
+        <Stat label="Indicações obtidas" value={String(stats.indicacoes)} />
+        <Stat label="Identificaram o problema" value={`${stats.percIdentificaram}%`} />
+        <Stat label="Apontaram outro problema" value={`${stats.percOutroProblema}%`} />
+        <Stat label="Contatos disponíveis" value={String(contatosDisponiveis)} />
+        <Stat label="Tarefas pendentes" value={String(tarefasPendentes)} />
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">
+          <h2 className="mb-4 text-sm font-semibold text-ink">
             Entrevistas por status
           </h2>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dadosStatus}>
-                <XAxis dataKey="nome" fontSize={12} />
-                <YAxis allowDecimals={false} fontSize={12} />
-                <Tooltip />
-                <Bar dataKey="total" radius={[4, 4, 0, 0]}>
-                  {dadosStatus.map((_, i) => (
-                    <Cell key={i} fill={CORES[i % CORES.length]} />
+                <XAxis
+                  dataKey="nome"
+                  tickLine={false}
+                  axisLine={{ stroke: "#e5e5e5" }}
+                  tick={tickStyle}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  width={28}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={tickStyle}
+                />
+                <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
+                <Bar dataKey="total" radius={[6, 6, 0, 0]}>
+                  {dadosStatus.map((s) => (
+                    <Cell key={s.nome} fill={CORES_STATUS[s.nome] ?? "#737373"} />
                   ))}
                 </Bar>
               </BarChart>
@@ -110,7 +139,7 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">
+          <h2 className="mb-4 text-sm font-semibold text-ink">
             O problema foi identificado?
           </h2>
           {stats.realizadas === 0 ? (
@@ -124,13 +153,19 @@ export default function DashboardPage() {
                     dataKey="valor"
                     nameKey="nome"
                     outerRadius={80}
-                    label
+                    label={{
+                      fill: "#737373",
+                      fontSize: 12,
+                    }}
                   >
-                    <Cell fill="#22c55e" />
-                    <Cell fill="#cbd5e1" />
+                    <Cell fill="#0a0a0a" />
+                    <Cell fill="#e5e5e5" />
                   </Pie>
-                  <Legend />
-                  <Tooltip />
+                  <Legend
+                    wrapperStyle={{ fontSize: 12, color: "#737373" }}
+                    iconType="circle"
+                  />
+                  <Tooltip contentStyle={tooltipStyle} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -138,25 +173,27 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">
+          <h2 className="mb-4 text-sm font-semibold text-ink">
             Médias dos processos seletivos
           </h2>
-          <ul className="space-y-2 text-sm text-slate-700">
-            <li className="flex justify-between border-b border-slate-100 pb-1">
-              <span>Tempo médio do processo seletivo</span>
-              <strong>
+          <ul className="text-sm">
+            <li className="flex items-center justify-between gap-3 border-b border-hairline py-2.5 first:pt-0">
+              <span className="text-mid-gray">Tempo médio do processo seletivo</span>
+              <strong className="font-medium text-ink">
                 {stats.tempoMedioHoras !== null ? `${stats.tempoMedioHoras} h` : "—"}
               </strong>
             </li>
-            <li className="flex justify-between border-b border-slate-100 pb-1">
-              <span>Currículos por abertura de vaga</span>
-              <strong>{stats.mediaCurriculos !== null ? stats.mediaCurriculos : "—"}</strong>
+            <li className="flex items-center justify-between gap-3 border-b border-hairline py-2.5">
+              <span className="text-mid-gray">Currículos por abertura de vaga</span>
+              <strong className="font-medium text-ink">
+                {stats.mediaCurriculos !== null ? stats.mediaCurriculos : "—"}
+              </strong>
             </li>
-            <li className="flex justify-between">
-              <span>Passam do período de experiência</span>
-              <strong>
+            <li className="flex items-center justify-between gap-3 py-2.5 last:pb-0">
+              <span className="text-mid-gray">Passam do período de experiência</span>
+              <strong className="font-medium text-ink">
                 {stats.percMediaExperiencia !== null
                   ? `${stats.percMediaExperiencia}%`
                   : "—"}
@@ -166,17 +203,20 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">
+          <h2 className="mb-4 text-sm font-semibold text-ink">
             Principais gargalos (pergunta 2)
           </h2>
           {stats.gargalos.length === 0 ? (
             <EmptyState>Ainda sem gargalos registrados.</EmptyState>
           ) : (
-            <ul className="space-y-2 text-sm">
+            <ul className="text-sm">
               {stats.gargalos.map((g, i) => (
-                <li key={i} className="flex items-center justify-between gap-2">
-                  <span className="text-slate-700">{g.texto}</span>
-                  <Badge color="blue">{g.quantidade}x</Badge>
+                <li
+                  key={i}
+                  className="flex items-center justify-between gap-3 border-b border-hairline py-2.5 first:pt-0 last:border-0 last:pb-0"
+                >
+                  <span className="text-ink-soft">{g.texto}</span>
+                  <Badge variant="soft">{g.quantidade}x</Badge>
                 </li>
               ))}
             </ul>
@@ -184,10 +224,10 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Próximos passos</h2>
-          <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-700">
+          <h2 className="mb-4 text-sm font-semibold text-ink">Próximos passos</h2>
+          <ol className="list-decimal space-y-2 pl-5 text-sm text-ink-soft marker:text-mid-gray">
             {passos.map((p, i) => (
               <li key={i}>{p}</li>
             ))}
@@ -195,15 +235,22 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Lembretes importantes</h2>
+          <h2 className="mb-4 text-sm font-semibold text-ink">
+            Lembretes importantes
+          </h2>
           {lembretesAtivos.length === 0 ? (
             <EmptyState>Nenhum lembrete ativo.</EmptyState>
           ) : (
-            <ul className="space-y-2 text-sm">
+            <ul className="text-sm">
               {lembretesAtivos.map((l) => (
-                <li key={l.id} className="flex items-start gap-2">
-                  <span>{l.tipo === "critico" ? "Crítico" : "Atenção"}</span>
-                  <span className="text-slate-700">{l.texto}</span>
+                <li
+                  key={l.id}
+                  className="flex items-start gap-3 border-b border-hairline py-2.5 first:pt-0 last:border-0 last:pb-0"
+                >
+                  <Badge variant={l.tipo === "critico" ? "solid" : "outline"}>
+                    {l.tipo === "critico" ? "Crítico" : "Atenção"}
+                  </Badge>
+                  <span className="text-ink-soft">{l.texto}</span>
                 </li>
               ))}
             </ul>
@@ -211,14 +258,5 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
-  );
-}
-
-function Kpi({ titulo, valor }: { titulo: string; valor: string }) {
-  return (
-    <Card>
-      <p className="text-xs text-slate-500">{titulo}</p>
-      <p className="mt-1 text-2xl font-bold text-slate-900">{valor}</p>
-    </Card>
   );
 }

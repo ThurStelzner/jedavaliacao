@@ -16,22 +16,22 @@ const LINKS = [
 export default function Nav() {
   const pathname = usePathname();
   return (
-    <aside className="w-60 shrink-0 border-r border-slate-200 bg-white">
-      <div className="p-4 border-b border-slate-200">
-        <h1 className="text-lg font-bold text-slate-900">Jeda Validação</h1>
-        <p className="text-xs text-slate-500 mt-1">Validação de problema</p>
+    <aside className="shrink-0 border-b border-hairline bg-surface-alt md:sticky md:top-0 md:h-screen md:w-60 md:overflow-y-auto md:border-b-0 md:border-r">
+      <div className="px-5 pt-5 text-center md:py-6 md:text-left">
+        <p className="text-subheading font-semibold text-ink">Jedavaliacao</p>
+        <p className="mt-1 text-caption text-mid-gray">Validação de problema</p>
       </div>
-      <nav className="p-2 flex flex-col gap-1">
+      <nav className="flex flex-wrap justify-center gap-1 px-3 py-3 md:flex-col md:flex-nowrap md:justify-start md:py-0">
         {LINKS.map((l) => {
           const ativo = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
           return (
             <Link
               key={l.href}
               href={l.href}
-              className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              className={`whitespace-nowrap rounded-buttons px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mid-gray ${
                 ativo
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-700 hover:bg-slate-100"
+                  ? "bg-ink text-[#fafafa]"
+                  : "text-ink-soft hover:bg-canvas"
               }`}
             >
               {l.label}

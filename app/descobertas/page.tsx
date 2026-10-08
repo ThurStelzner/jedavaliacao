@@ -71,7 +71,7 @@ export default function DescobertasPage() {
       />
 
       <Card className="mb-6">
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Tipo">
             <Select
               value={form.tipo}
@@ -94,7 +94,7 @@ export default function DescobertasPage() {
             />
           </Field>
         </div>
-        <div className="mt-3">
+        <div className="mt-4">
           <Field label="Descrição">
             <Textarea
               value={form.texto}
@@ -102,7 +102,7 @@ export default function DescobertasPage() {
             />
           </Field>
         </div>
-        <div className="mt-4">
+        <div className="mt-5">
           <Button onClick={adicionar}>Registrar descoberta</Button>
         </div>
       </Card>
@@ -116,11 +116,11 @@ export default function DescobertasPage() {
         <div className="space-y-3">
           {lista.map((d) => (
             <Card key={d.id}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <Badge color="blue">{labelTipo(d.tipo)}</Badge>
-                  <p className="mt-2 text-sm text-slate-800">{d.texto}</p>
-                  <p className="mt-1 text-xs text-slate-400">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <Badge variant="soft">{labelTipo(d.tipo)}</Badge>
+                  <p className="mt-2 text-body text-ink-soft">{d.texto}</p>
+                  <p className="mt-1 text-caption text-mid-gray">
                     {d.empresa ? `Empresa: ${d.empresa}` : ""}
                     {d.entrevistaId ? ` · Entrevista: ${d.entrevistaId}` : ""}
                   </p>

@@ -24,12 +24,12 @@ const STATUS: StatusContato[] = [
   "sem_interesse",
 ];
 
-const CORES: Record<StatusContato, "slate" | "blue" | "yellow" | "green" | "red"> = {
-  novo: "slate",
-  contatado: "blue",
-  agendado: "yellow",
-  entrevistado: "green",
-  sem_interesse: "red",
+const VARIANTES: Record<StatusContato, "solid" | "soft" | "outline"> = {
+  novo: "outline",
+  contatado: "soft",
+  agendado: "soft",
+  entrevistado: "solid",
+  sem_interesse: "outline",
 };
 
 function vazio(): Contato {
@@ -90,13 +90,15 @@ export default function ContatosPage() {
       <PageHeader
         title="Contatos"
         subtitle={`${lista.length} contato(s) · ${disponiveis} disponível(is)`}
-        right={<Button onClick={() => setMostrarForm((v) => !v)}>+ Novo contato</Button>}
+        right={
+          <Button onClick={() => setMostrarForm((v) => !v)}>Novo contato</Button>
+        }
       />
 
       {mostrarForm && (
         <Card className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold text-slate-700">Novo contato</h2>
-          <div className="grid gap-3 md:grid-cols-3">
+          <h2 className="mb-4 text-sm font-semibold text-ink">Novo contato</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Nome">
               <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
             </Field>
@@ -139,7 +141,7 @@ export default function ContatosPage() {
               </Select>
             </Field>
           </div>
-          <div className="mt-3">
+          <div className="mt-4">
             <Field label="Novas indicações feitas">
               <Textarea
                 value={form.novasIndicacoes}
@@ -147,7 +149,7 @@ export default function ContatosPage() {
               />
             </Field>
           </div>
-          <div className="mt-4 flex gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             <Button onClick={adicionar}>Salvar</Button>
             <Button variant="ghost" onClick={() => setMostrarForm(false)}>
               Cancelar
@@ -159,59 +161,65 @@ export default function ContatosPage() {
       {lista.length === 0 ? (
         <EmptyState>Nenhum contato cadastrado.</EmptyState>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500">
-              <tr>
-                <th className="p-3 font-medium">Nome</th>
-                <th className="p-3 font-medium">Empresa / Cargo</th>
-                <th className="p-3 font-medium">Indicado por</th>
-                <th className="p-3 font-medium">Status</th>
-                <th className="p-3 font-medium">Entrevista</th>
-                <th className="p-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {lista.map((c) => (
-                <tr key={c.id} className="border-t border-slate-100">
-                  <td className="p-3">
-                    <p className="font-medium text-slate-900">{c.nome}</p>
-                    {c.contato && <p className="text-xs text-slate-400">{c.contato}</p>}
-                  </td>
-                  <td className="p-3 text-slate-600">
-                    {c.empresa || "—"} {c.cargo ? `· ${c.cargo}` : ""}
-                    {c.novasIndicacoes && (
-                      <p className="text-xs text-slate-400">Indicações: {c.novasIndicacoes}</p>
-                    )}
-                  </td>
-                  <td className="p-3 text-slate-600">{c.quemIndicou || "—"}</td>
-                  <td className="p-3">
-                    <Select
-                      className="w-36"
-                      value={c.status}
-                      onChange={(e) => mudarStatus(c, e.target.value as StatusContato)}
-                    >
-                      {STATUS.map((s) => (
-                        <option key={s}>{s}</option>
-                      ))}
-                    </Select>
-                  </td>
-                  <td className="p-3">
-                    {c.entrevistaRealizada ? (
-                      <Badge color="green">realizada</Badge>
-                    ) : (
-                      <Badge color={CORES[c.status]}>{c.status}</Badge>
-                    )}
-                  </td>
-                  <td className="p-3 text-right">
-                    <Button variant="danger" onClick={() => remover(c.id)}>
-                      Excluir
-                    </Button>
-                  </td>
+        <div className="overflow-hidden rounded-cards border border-hairline bg-paper shadow-subtle">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead className="border-b border-hairline bg-surface-alt text-left">
+                <tr>
+                  <th className="px-5 py-3 text-caption font-medium uppercase text-mid-gray">Nome</th>
+                  <th className="px-5 py-3 text-caption font-medium uppercase text-mid-gray">Empresa / Cargo</th>
+                  <th className="px-5 py-3 text-caption font-medium uppercase text-mid-gray">Indicado por</th>
+                  <th className="px-5 py-3 text-caption font-medium uppercase text-mid-gray">Status</th>
+                  <th className="px-5 py-3 text-caption font-medium uppercase text-mid-gray">Entrevista</th>
+                  <th className="px-5 py-3"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {lista.map((c) => (
+                  <tr key={c.id} className="border-b border-hairline last:border-0">
+                    <td className="px-5 py-3.5">
+                      <p className="font-medium text-ink">{c.nome}</p>
+                      {c.contato && (
+                        <p className="mt-0.5 text-caption text-mid-gray">{c.contato}</p>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-ink-soft">
+                      {c.empresa || "—"} {c.cargo ? `· ${c.cargo}` : ""}
+                      {c.novasIndicacoes && (
+                        <p className="mt-0.5 text-caption text-mid-gray">
+                          Indicações: {c.novasIndicacoes}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-ink-soft">{c.quemIndicou || "—"}</td>
+                    <td className="px-5 py-3.5">
+                      <Select
+                        className="w-36"
+                        value={c.status}
+                        onChange={(e) => mudarStatus(c, e.target.value as StatusContato)}
+                      >
+                        {STATUS.map((s) => (
+                          <option key={s}>{s}</option>
+                        ))}
+                      </Select>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {c.entrevistaRealizada ? (
+                        <Badge variant="solid">realizada</Badge>
+                      ) : (
+                        <Badge variant={VARIANTES[c.status]}>{c.status}</Badge>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <Button variant="danger" onClick={() => remover(c.id)}>
+                        Excluir
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

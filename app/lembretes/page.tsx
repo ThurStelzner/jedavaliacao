@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiCreate, apiDelete, apiList, apiUpdate } from "@/lib/api";
 import type { Lembrete, TipoLembrete } from "@/lib/types";
 import {
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -62,8 +63,8 @@ export default function LembretesPage() {
       />
 
       <Card className="mb-6">
-        <div className="grid gap-3 md:grid-cols-4">
-          <div className="md:col-span-3">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+          <div className="sm:col-span-1 md:col-span-3">
             <Field label="Novo lembrete">
               <Input
                 value={form.texto}
@@ -81,7 +82,7 @@ export default function LembretesPage() {
             </Select>
           </Field>
         </div>
-        <div className="mt-4">
+        <div className="mt-5">
           <Button onClick={adicionar}>Adicionar</Button>
         </div>
       </Card>
@@ -91,20 +92,22 @@ export default function LembretesPage() {
       ) : (
         <div className="space-y-2">
           {lista.map((l) => (
-            <Card
-              key={l.id}
-              className={`border-l-4 ${
-                l.tipo === "critico" ? "border-l-red-500" : "border-l-yellow-400"
-              } ${l.ativo ? "" : "opacity-50"}`}
-            >
-              <div className="flex items-center gap-3">
-                <p className="flex-1 text-sm text-slate-800">{l.texto}</p>
-                <Button variant="ghost" onClick={() => alternar(l)}>
-                  {l.ativo ? "Desativar" : "Ativar"}
-                </Button>
-                <Button variant="danger" onClick={() => remover(l.id)}>
-                  Excluir
-                </Button>
+            <Card key={l.id} className={l.ativo ? "" : "opacity-50"}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex items-start gap-3 sm:min-w-0 sm:flex-1">
+                  <Badge variant={l.tipo === "critico" ? "solid" : "outline"}>
+                    {l.tipo === "critico" ? "Crítico" : "Atenção"}
+                  </Badge>
+                  <p className="min-w-0 flex-1 text-body text-ink-soft">{l.texto}</p>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button variant="ghost" onClick={() => alternar(l)}>
+                    {l.ativo ? "Desativar" : "Ativar"}
+                  </Button>
+                  <Button variant="danger" onClick={() => remover(l.id)}>
+                    Excluir
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}

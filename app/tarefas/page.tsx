@@ -15,10 +15,10 @@ import {
 } from "@/components/ui";
 
 const PRIORIDADES: Prioridade[] = ["baixa", "media", "alta"];
-const CORES_PRIORIDADE: Record<Prioridade, "slate" | "yellow" | "red"> = {
-  baixa: "slate",
-  media: "yellow",
-  alta: "red",
+const VARIANTES_PRIORIDADE: Record<Prioridade, "solid" | "soft" | "outline"> = {
+  baixa: "outline",
+  media: "soft",
+  alta: "solid",
 };
 
 function vazia(): Tarefa {
@@ -72,13 +72,13 @@ export default function TarefasPage() {
       <PageHeader
         title="Tarefas"
         subtitle={`${concluidas}/${lista.length} concluída(s)`}
-        right={<Button onClick={() => setMostrarForm((v) => !v)}>+ Nova tarefa</Button>}
+        right={<Button onClick={() => setMostrarForm((v) => !v)}>Nova tarefa</Button>}
       />
 
       {mostrarForm && (
         <Card className="mb-6">
-          <div className="grid gap-3 md:grid-cols-4">
-            <div className="md:col-span-2">
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+            <div className="sm:col-span-2">
               <Field label="Tarefa">
                 <Input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} />
               </Field>
@@ -100,7 +100,7 @@ export default function TarefasPage() {
               </Select>
             </Field>
           </div>
-          <div className="mt-4 flex gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             <Button onClick={adicionar}>Salvar</Button>
             <Button variant="ghost" onClick={() => setMostrarForm(false)}>
               Cancelar
@@ -120,24 +120,26 @@ export default function TarefasPage() {
                   type="checkbox"
                   checked={t.status === "concluida"}
                   onChange={() => alternar(t)}
-                  className="h-5 w-5"
+                  className="h-4 w-4 shrink-0"
                 />
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <p
-                    className={`text-sm font-medium ${
+                    className={`text-body font-medium ${
                       t.status === "concluida"
-                        ? "text-slate-400 line-through"
-                        : "text-slate-900"
+                        ? "text-mid-gray line-through"
+                        : "text-ink"
                     }`}
                   >
                     {t.titulo}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="mt-0.5 text-caption text-mid-gray">
                     {t.responsavel ? `Resp.: ${t.responsavel}` : "Sem responsável"}
                     {t.prazo ? ` · Prazo: ${t.prazo}` : ""}
                   </p>
                 </div>
-                <Badge color={CORES_PRIORIDADE[t.prioridade]}>{t.prioridade}</Badge>
+                <Badge variant={VARIANTES_PRIORIDADE[t.prioridade]}>
+                  {t.prioridade}
+                </Badge>
                 <Button variant="danger" onClick={() => remover(t.id)}>
                   Excluir
                 </Button>
