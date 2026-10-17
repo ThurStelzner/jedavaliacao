@@ -1,15 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import type {
-  DB,
-  Descoberta,
-  Entrevista,
-  Lembrete,
-  Pergunta,
-  Prioridade,
-  StatusEntrevista,
-  Tarefa,
-} from "./types";
+import type { DB, Descoberta, Entrevista, Lembrete, Prioridade, Tarefa } from "./types";
 
 export const COLLECTIONS = [
   "entrevistas",
@@ -97,59 +88,10 @@ function seedDB(): DB {
   };
 }
 
-// Garante que registros antigos ou incompletos (ex.: criados via API sem os
-// campos de validação) não quebrem os gráficos nem inflam as estatísticas.
-function normalizaEntrevista(e: Partial<Entrevista>): Entrevista {
-  const status: StatusEntrevista = e.status === "realizada" || e.status === "agendada"
-    ? e.status
-    : "planejada";
-  const prazo = e.clienteEntendePrazos;
-  const recusa = e.recusouServico;
-  return {
-    id: e.id ?? uid(),
-    nomeEntrevistado: e.nomeEntrevistado ?? "",
-    empresa: e.empresa ?? "",
-    cargo: e.cargo ?? "",
-    porte: e.porte ?? "",
-    area: e.area ?? "",
-    data: e.data ?? "",
-    responsavel: e.responsavel ?? "",
-    status,
-    gravacao: e.gravacao ?? "",
-    anotacoes: e.anotacoes ?? "",
-    respostas: Array.isArray(e.respostas)
-      ? e.respostas
-          .filter((r) => r && typeof r.perguntaId === "string")
-          .map((r) => ({
-            perguntaId: r.perguntaId,
-            resposta: typeof r.resposta === "string" ? r.resposta : "",
-          }))
-      : [],
-    indicacoes: Array.isArray(e.indicacoes)
-      ? e.indicacoes.filter((i): i is string => typeof i === "string")
-      : [],
-    identificouProblema: Boolean(e.identificouProblema),
-    outroProblema: e.outroProblema ?? "",
-    clienteEntendePrazos:
-      prazo === "sim" || prazo === "parcial" || prazo === "nao" ? prazo : "",
-    recusouServico:
-      recusa === "sim" || recusa === "nao" || recusa === "incerto" ? recusa : "",
-    createdAt: e.createdAt ?? now(),
-  };
-}
-
-function normalizaPergunta(p: Partial<Pergunta>): Pergunta {
-  return {
-    id: p.id ?? uid(),
-    texto: p.texto ?? "",
-    createdAt: p.createdAt ?? now(),
-  };
-}
-
 function normalize(db: Partial<DB>): DB {
   return {
-    entrevistas: (db.entrevistas ?? []).map(normalizaEntrevista),
-    perguntas: (db.perguntas ?? []).map(normalizaPergunta),
+    entrevistas: db.entrevistas ?? [],
+    perguntas: db.perguntas ?? [],
     tarefas: db.tarefas ?? [],
     lembretes: db.lembretes ?? [],
     descobertas: db.descobertas ?? [],

@@ -46,7 +46,7 @@ function contar<T extends string>(
   return [...conhecidas, ...outras];
 }
 
-export function avaliouProblema(e: Entrevista): boolean {
+function avaliouProblema(e: Entrevista): boolean {
   return (
     e.identificouProblema ||
     Boolean(e.clienteEntendePrazos) ||
@@ -63,15 +63,15 @@ export function calcStats(entrevistas: Entrevista[]): Stats {
     realizadas.map((e) => e.empresa.trim().toLowerCase()).filter(Boolean),
   );
 
+  const identificaram = realizadas.filter((e) => e.identificouProblema);
+  const comOutro = realizadas.filter((e) => e.outroProblema.trim().length > 0);
+  const recusas = realizadas.filter((e) => e.recusouServico === "sim").length;
+
   // Entrevistas que de fato avaliaram o problema de prazo (responderam os campos
   // de validação). Entrevistas com outro foco (ex.: check-in/retrabalho) ficam
   // registradas no site e aparecem como "Não avaliaram o prazo" nos gráficos,
   // mas fora do cálculo do percentual.
   const avaliaram = realizadas.filter(avaliouProblema);
-
-  const identificaram = realizadas.filter((e) => e.identificouProblema);
-  const comOutro = avaliaram.filter((e) => e.outroProblema.trim().length > 0);
-  const recusas = realizadas.filter((e) => e.recusouServico === "sim").length;
 
   const indicacoes = realizadas.reduce(
     (acc, e) => acc + e.indicacoes.filter((i) => i.trim()).length,
