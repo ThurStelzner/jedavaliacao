@@ -278,7 +278,7 @@ export default function AnalisePage() {
 
             <Card>
               <h2 className="mb-4 text-sm font-semibold text-ink">
-                Entrevistas por responsável
+                Entrevistas realizadas por responsável
               </h2>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">

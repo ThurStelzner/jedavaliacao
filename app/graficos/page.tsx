@@ -16,7 +16,7 @@ import {
   YAxis,
 } from "recharts";
 import { apiList } from "@/lib/api";
-import { calcStats } from "@/lib/stats";
+import { avaliouProblema, calcStats } from "@/lib/stats";
 import type { Entrevista, Pergunta } from "@/lib/types";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
 
@@ -41,6 +41,7 @@ const CORES_PRAZO = {
   sim: "#7C5AC8",
   parcial: "#a78bfa",
   nao: "#0a0a0a",
+  naoInformado: "#d4d4d4",
   naoAvaliaram: "#e5e5e5",
 };
 
@@ -48,16 +49,9 @@ const CORES_RECUSA = {
   sim: "#dc2626",
   nao: "#0a0a0a",
   incerto: "#a3a3a3",
+  naoInformado: "#d4d4d4",
   naoAvaliaram: "#e5e5e5",
 };
-
-function avaliouProblema(e: Entrevista): boolean {
-  return (
-    e.identificouProblema ||
-    Boolean(e.clienteEntendePrazos) ||
-    Boolean(e.recusouServico)
-  );
-}
 
 export default function GraficosPage() {
   const [entrevistas, setEntrevistas] = useState<Entrevista[]>([]);
@@ -87,11 +81,15 @@ export default function GraficosPage() {
   }, []);
 
   const stats = useMemo(() => calcStats(entrevistas), [entrevistas]);
+  const realizadas = useMemo(
+    () => entrevistas.filter((e) => e.status === "realizada"),
+    [entrevistas],
+  );
 
   // 1) Entrevistas por dia + acumulado
   const porDia = useMemo(() => {
     const map = new Map<string, number>();
-    for (const e of entrevistas) {
+    for (const e of realizadas) {
       const d = (e.data || "").trim();
       if (!d) continue;
       map.set(d, (map.get(d) ?? 0) + 1);
@@ -103,7 +101,7 @@ export default function GraficosPage() {
         acc += total;
         return { dia: dia.slice(5), total, acumulado: acc };
       });
-  }, [entrevistas]);
+  }, [realizadas]);
 
   // 2) Status
   const porStatus = useMemo(
@@ -116,16 +114,11 @@ export default function GraficosPage() {
   );
 
   // 3) Por responsável
-  const porResponsavel = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const e of entrevistas) {
-      const r = (e.responsavel || "Não informado").trim() || "Não informado";
-      map.set(r, (map.get(r) ?? 0) + 1);
-    }
-    return Array.from(map.entries())
-      .map(([nome, total]) => ({ nome, total }))
-      .sort((a, b) => b.total - a.total);
-  }, [entrevistas]);
+  const porResponsavel = useMemo(
+    () =>
+      stats.porResponsavel.map((d) => ({ nome: d.responsavel, total: d.total })),
+    [stats],
+  );
 
   // 4) Por porte
   const porPorte = useMemo(() => {
@@ -153,44 +146,60 @@ export default function GraficosPage() {
   const prazoPorResponsavel = useMemo(() => {
     const map = new Map<
       string,
-      { sim: number; parcial: number; nao: number; naoAvaliaram: number }
+      {
+        sim: number;
+        parcial: number;
+        nao: number;
+        naoInformado: number;
+        naoAvaliaram: number;
+      }
     >();
-    for (const e of entrevistas) {
+    for (const e of realizadas) {
       const r = (e.responsavel || "Não informado").trim() || "Não informado";
       const atual =
-        map.get(r) ?? { sim: 0, parcial: 0, nao: 0, naoAvaliaram: 0 };
+        map.get(r) ??
+        { sim: 0, parcial: 0, nao: 0, naoInformado: 0, naoAvaliaram: 0 };
       if (!avaliouProblema(e)) atual.naoAvaliaram += 1;
       else if (e.clienteEntendePrazos === "sim") atual.sim += 1;
       else if (e.clienteEntendePrazos === "parcial") atual.parcial += 1;
-      else atual.nao += 1;
+      else if (e.clienteEntendePrazos === "nao") atual.nao += 1;
+      else atual.naoInformado += 1;
       map.set(r, atual);
     }
     return Array.from(map.entries()).map(([nome, v]) => ({ nome, ...v }));
-  }, [entrevistas]);
+  }, [realizadas]);
 
   // 7) Recusa por responsável (empilhado)
   const recusaPorResponsavel = useMemo(() => {
     const map = new Map<
       string,
-      { sim: number; nao: number; incerto: number; naoAvaliaram: number }
+      {
+        sim: number;
+        nao: number;
+        incerto: number;
+        naoInformado: number;
+        naoAvaliaram: number;
+      }
     >();
-    for (const e of entrevistas) {
+    for (const e of realizadas) {
       const r = (e.responsavel || "Não informado").trim() || "Não informado";
       const atual =
-        map.get(r) ?? { sim: 0, nao: 0, incerto: 0, naoAvaliaram: 0 };
+        map.get(r) ??
+        { sim: 0, nao: 0, incerto: 0, naoInformado: 0, naoAvaliaram: 0 };
       if (!avaliouProblema(e)) atual.naoAvaliaram += 1;
       else if (e.recusouServico === "sim") atual.sim += 1;
       else if (e.recusouServico === "incerto") atual.incerto += 1;
-      else atual.nao += 1;
+      else if (e.recusouServico === "nao") atual.nao += 1;
+      else atual.naoInformado += 1;
       map.set(r, atual);
     }
     return Array.from(map.entries()).map(([nome, v]) => ({ nome, ...v }));
-  }, [entrevistas]);
+  }, [realizadas]);
 
   // 8) Indicações por responsável
   const indicacoesPorResponsavel = useMemo(() => {
     const map = new Map<string, number>();
-    for (const e of entrevistas) {
+    for (const e of realizadas) {
       const r = (e.responsavel || "Não informado").trim() || "Não informado";
       const n = e.indicacoes.filter((i) => i.trim()).length;
       map.set(r, (map.get(r) ?? 0) + n);
@@ -198,19 +207,19 @@ export default function GraficosPage() {
     return Array.from(map.entries())
       .map(([nome, total]) => ({ nome, total }))
       .sort((a, b) => b.total - a.total);
-  }, [entrevistas]);
+  }, [realizadas]);
 
   // 9) Taxa de resposta por pergunta
   const respostaPorPergunta = useMemo(
     () =>
       perguntas.map((p, i) => {
-        const respondidas = entrevistas.filter((e) => {
+        const respondidas = realizadas.filter((e) => {
           const r = e.respostas.find((x) => x.perguntaId === p.id)?.resposta ?? "";
           return r.trim() && !r.startsWith("Não abordado");
         }).length;
         return { nome: `P${i + 1}`, respondidas, texto: p.texto };
       }),
-    [perguntas, entrevistas],
+    [perguntas, realizadas],
   );
 
   // 10) Confirmam por porte (empilhado)
@@ -219,7 +228,7 @@ export default function GraficosPage() {
       string,
       { sim: number; nao: number; naoAvaliaram: number }
     >();
-    for (const e of entrevistas) {
+    for (const e of realizadas) {
       const p = e.porte || "Não informado";
       const atual = map.get(p) ?? { sim: 0, nao: 0, naoAvaliaram: 0 };
       if (!avaliouProblema(e)) atual.naoAvaliaram += 1;
@@ -228,7 +237,7 @@ export default function GraficosPage() {
       map.set(p, atual);
     }
     return Array.from(map.entries()).map(([nome, v]) => ({ nome, ...v }));
-  }, [entrevistas]);
+  }, [realizadas]);
 
   // 11) Funil de validação
   const funil = useMemo(() => {
@@ -275,7 +284,7 @@ export default function GraficosPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <Card className="lg:col-span-2">
             <h2 className="mb-4 text-sm font-semibold text-ink">
-              Entrevistas por dia (barras) e acumulado (linha)
+              Entrevistas realizadas por dia (barras) e acumulado (linha)
             </h2>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -344,7 +353,7 @@ export default function GraficosPage() {
 
           <Card>
             <h2 className="mb-4 text-sm font-semibold text-ink">
-              Entrevistas por responsável
+              Entrevistas realizadas por responsável
             </h2>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -455,6 +464,12 @@ export default function GraficosPage() {
                     fill={CORES_PRAZO.nao}
                   />
                   <Bar
+                    dataKey="naoInformado"
+                    name="Não informado"
+                    stackId="a"
+                    fill={CORES_PRAZO.naoInformado}
+                  />
+                  <Bar
                     dataKey="naoAvaliaram"
                     name="Não avaliaram"
                     stackId="a"
@@ -504,6 +519,12 @@ export default function GraficosPage() {
                     name="Incerto"
                     stackId="a"
                     fill={CORES_RECUSA.incerto}
+                  />
+                  <Bar
+                    dataKey="naoInformado"
+                    name="Não informado"
+                    stackId="a"
+                    fill={CORES_RECUSA.naoInformado}
                   />
                   <Bar
                     dataKey="naoAvaliaram"
