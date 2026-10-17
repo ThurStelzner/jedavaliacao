@@ -11,7 +11,8 @@ const geist = Geist({
 
 export const metadata: Metadata = {
   title: "Jedavaliacao",
-  description: "MVP para validar o problema de triagem de currículos em pequenas empresas",
+  description:
+    "Validação do problema de compreensão do prazo de entrega dos serviços em oficinas automotivas de Joinville",
 };
 
 export default function RootLayout({

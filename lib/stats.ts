@@ -1,19 +1,57 @@
 import type { Entrevista } from "./types";
 
+export const META_ENTREVISTAS = 20;
+
+// Limiar de validação: maioria qualificada das oficinas confirmando o problema.
+// (Heurística comum em customer discovery; dados do setor — J.D. Power — mostram
+// que atrasos são comuns e a satisfação depende de manter o cliente informado.)
+export const META_PERC_PROBLEMA = 60;
+
 export interface Stats {
   total: number;
   realizadas: number;
   agendadas: number;
   planejadas: number;
   empresasEntrevistadas: number;
-  rhEntrevistados: number;
+  recusas: number;
+  avaliaramProblema: number;
   identificaramProblema: number;
   percIdentificaram: number;
   outroProblema: number;
   percOutroProblema: number;
   indicacoes: number;
+  percMeta: number;
+  validado: boolean;
   porStatus: Array<{ status: string; total: number }>;
   porPorte: Array<{ porte: string; total: number }>;
+  porResponsavel: Array<{ responsavel: string; total: number }>;
+  porClienteEntendePrazos: Array<{ faixa: string; total: number }>;
+  porRecusa: Array<{ faixa: string; total: number }>;
+}
+
+function contar<T extends string>(
+  valores: Array<T | undefined>,
+  ordem: T[],
+  rotulosPadrao = "Não informado",
+): Array<{ faixa: string; total: number }> {
+  const contagem = new Map<string, number>();
+  for (const v of valores) {
+    const chave = v && v.trim() ? v : rotulosPadrao;
+    contagem.set(chave, (contagem.get(chave) ?? 0) + 1);
+  }
+  const conhecidas = ordem.map((o) => ({ faixa: o, total: contagem.get(o) ?? 0 }));
+  const outras = Array.from(contagem.entries())
+    .filter(([k]) => !ordem.includes(k as T))
+    .map(([faixa, total]) => ({ faixa, total }));
+  return [...conhecidas, ...outras];
+}
+
+function avaliouProblema(e: Entrevista): boolean {
+  return (
+    e.identificouProblema ||
+    Boolean(e.clienteEntendePrazos) ||
+    Boolean(e.recusouServico)
+  );
 }
 
 export function calcStats(entrevistas: Entrevista[]): Stats {
@@ -25,13 +63,15 @@ export function calcStats(entrevistas: Entrevista[]): Stats {
     realizadas.map((e) => e.empresa.trim().toLowerCase()).filter(Boolean),
   );
 
-  const rh = realizadas.filter((e) => {
-    const t = `${e.area} ${e.cargo}`.toLowerCase();
-    return t.includes("rh") || t.includes("gestão de pessoas") || t.includes("recursos humanos");
-  });
-
   const identificaram = realizadas.filter((e) => e.identificouProblema);
   const comOutro = realizadas.filter((e) => e.outroProblema.trim().length > 0);
+  const recusas = realizadas.filter((e) => e.recusouServico === "sim").length;
+
+  // Entrevistas que de fato avaliaram o problema de prazo (responderam os campos
+  // de validação). Entrevistas com outro foco (ex.: check-in/retrabalho) ficam
+  // registradas no site e aparecem como "Não avaliaram o prazo" nos gráficos,
+  // mas fora do cálculo do percentual.
+  const avaliaram = realizadas.filter(avaliouProblema);
 
   const indicacoes = realizadas.reduce(
     (acc, e) => acc + e.indicacoes.filter((i) => i.trim()).length,
@@ -49,7 +89,16 @@ export function calcStats(entrevistas: Entrevista[]): Stats {
     porteCount.set(p, (porteCount.get(p) ?? 0) + 1);
   }
 
-  const totalRealizadas = realizadas.length || 1;
+  const responsavelCount = new Map<string, number>();
+  for (const e of realizadas) {
+    const r = (e.responsavel || "Não informado").trim() || "Não informado";
+    responsavelCount.set(r, (responsavelCount.get(r) ?? 0) + 1);
+  }
+
+  const totalAvaliaram = avaliaram.length || 1;
+  const percIdentificaram = avaliaram.length
+    ? Math.round((identificaram.length / totalAvaliaram) * 100)
+    : 0;
 
   return {
     total: entrevistas.length,
@@ -57,37 +106,63 @@ export function calcStats(entrevistas: Entrevista[]): Stats {
     agendadas: agendadas.length,
     planejadas: planejadas.length,
     empresasEntrevistadas: empresas.size,
-    rhEntrevistados: rh.length,
+    recusas,
+    avaliaramProblema: avaliaram.length,
     identificaramProblema: identificaram.length,
-    percIdentificaram: realizadas.length ? Math.round((identificaram.length / totalRealizadas) * 100) : 0,
+    percIdentificaram,
     outroProblema: comOutro.length,
-    percOutroProblema: realizadas.length ? Math.round((comOutro.length / totalRealizadas) * 100) : 0,
+    percOutroProblema: avaliaram.length
+      ? Math.round((comOutro.length / totalAvaliaram) * 100)
+      : 0,
     indicacoes,
+    percMeta: Math.min(Math.round((realizadas.length / META_ENTREVISTAS) * 100), 100),
+    validado:
+      realizadas.length >= META_ENTREVISTAS && percIdentificaram >= META_PERC_PROBLEMA,
     porStatus: ["planejada", "agendada", "realizada"].map((s) => ({
       status: s,
       total: statusCount.get(s) ?? 0,
     })),
     porPorte: Array.from(porteCount.entries()).map(([porte, total]) => ({ porte, total })),
+    porResponsavel: Array.from(responsavelCount.entries())
+      .map(([responsavel, total]) => ({ responsavel, total }))
+      .sort((a, b) => b.total - a.total),
+    porClienteEntendePrazos: contar(
+      realizadas.map((e) =>
+        avaliouProblema(e) ? e.clienteEntendePrazos : "Não avaliaram o prazo",
+      ),
+      ["sim", "parcial", "nao"],
+    ),
+    porRecusa: contar(
+      realizadas.map((e) =>
+        avaliouProblema(e) ? e.recusouServico : "Não avaliaram o prazo",
+      ),
+      ["sim", "nao", "incerto"],
+    ),
   };
 }
 
 export function proximosPassos(s: Stats): string[] {
   const passos: string[] = [];
   if (s.total === 0) {
-    passos.push("Cadastre as entrevistas planejadas e agendadas para começar.");
-    passos.push("Comece entrevistando o Roger (mentor).");
+    passos.push("Cadastre as oficinas que serão entrevistadas para começar.");
+    passos.push("Monte o roteiro de perguntas na página \"Perguntas\".");
     return passos;
   }
-  if (s.realizadas < 5) {
-    passos.push(`Realizar mais entrevistas (${s.realizadas} de pelo menos 5).`);
+  if (s.realizadas < META_ENTREVISTAS) {
+    passos.push(`Realizar mais entrevistas (${s.realizadas} de ${META_ENTREVISTAS} da meta).`);
   }
   if (s.realizadas > 0) {
     passos.push("Registrar e revisar as respostas das entrevistas realizadas.");
-    passos.push("Analisar resultados e identificar padrões nos gargalos.");
+    passos.push("Cruzar os relatos com a espinha de peixe (causas do atraso).");
   }
   if (s.realizadas >= 3) {
     passos.push(
-      `Verificar se o problema foi validado (${s.percIdentificaram}% identificaram o problema).`,
+      `Verificar se o problema foi validado (${s.percIdentificaram}% identificaram o problema; meta ${META_PERC_PROBLEMA}%).`,
+    );
+  }
+  if (s.recusas > 0) {
+    passos.push(
+      `Destacar as ${s.recusas} recusas de serviço por prazo na apresentação (evidência forte).`,
     );
   }
   if (s.outroProblema > 0) {
@@ -98,7 +173,7 @@ export function proximosPassos(s: Stats): string[] {
   if (s.indicacoes < s.realizadas * 2 && s.realizadas > 0) {
     passos.push("Buscar mais indicações: meta de 2 por entrevista.");
   }
-  if (s.realizadas >= 5) {
+  if (s.realizadas >= META_ENTREVISTAS) {
     passos.push("Confirmar ou alterar a definição do problema com base nas evidências.");
   }
   return passos;

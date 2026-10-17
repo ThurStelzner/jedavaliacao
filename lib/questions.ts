@@ -7,12 +7,10 @@ export const PORTES = [
 ];
 
 export const AREAS = [
-  "RH",
-  "Gestão de Pessoas",
-  "Operações",
-  "Comercial",
-  "TI",
+  "Recepção / Atendimento",
+  "Oficina / Mecânica",
+  "Gestão / Proprietário",
   "Administrativo",
-  "Produção",
+  "Peças / Estoque",
   "Outro",
 ];

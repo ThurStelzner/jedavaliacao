@@ -2,6 +2,8 @@ export type StatusEntrevista = "planejada" | "agendada" | "realizada";
 export type Prioridade = "baixa" | "media" | "alta";
 export type StatusTarefa = "pendente" | "em_andamento" | "concluida";
 export type TipoLembrete = "critico" | "atencao";
+export type ClienteEntendePrazos = "sim" | "parcial" | "nao" | "";
+export type RecusouServico = "sim" | "nao" | "incerto" | "";
 export type TipoDescoberta =
   | "novo_problema"
   | "problema_recorrente"
@@ -37,6 +39,8 @@ export interface Entrevista {
   indicacoes: string[];
   identificouProblema: boolean;
   outroProblema: string;
+  clienteEntendePrazos?: ClienteEntendePrazos;
+  recusouServico?: RecusouServico;
   createdAt: string;
 }
 

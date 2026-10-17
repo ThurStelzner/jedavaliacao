@@ -14,7 +14,7 @@ import {
   YAxis,
 } from "recharts";
 import { apiList } from "@/lib/api";
-import { calcStats, proximosPassos } from "@/lib/stats";
+import { calcStats, META_ENTREVISTAS, META_PERC_PROBLEMA, proximosPassos } from "@/lib/stats";
 import type { Entrevista, Lembrete, Tarefa } from "@/lib/types";
 import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
 
@@ -40,20 +40,29 @@ export default function DashboardPage() {
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [lembretes, setLembretes] = useState<Lembrete[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [atualizadoEm, setAtualizadoEm] = useState("");
 
   useEffect(() => {
+    let ativo = true;
     async function carregar() {
       const [e, t, l] = await Promise.all([
         apiList<Entrevista>("entrevistas"),
         apiList<Tarefa>("tarefas"),
         apiList<Lembrete>("lembretes"),
       ]);
+      if (!ativo) return;
       setEntrevistas(e);
       setTarefas(t);
       setLembretes(l);
       setCarregando(false);
+      setAtualizadoEm(new Date().toLocaleTimeString("pt-BR"));
     }
     carregar();
+    const id = setInterval(carregar, 15000);
+    return () => {
+      ativo = false;
+      clearInterval(id);
+    };
   }, []);
 
   const stats = useMemo(() => calcStats(entrevistas), [entrevistas]);
@@ -71,7 +80,11 @@ export default function DashboardPage() {
     { nome: "Identificou o problema", valor: stats.identificaramProblema },
     {
       nome: "Não identificou",
-      valor: Math.max(stats.realizadas - stats.identificaramProblema, 0),
+      valor: Math.max(stats.avaliaramProblema - stats.identificaramProblema, 0),
+    },
+    {
+      nome: "Não avaliaram o prazo",
+      valor: Math.max(stats.realizadas - stats.avaliaramProblema, 0),
     },
   ];
 
@@ -83,7 +96,7 @@ export default function DashboardPage() {
     <div>
       <PageHeader
         title="Dashboard"
-        subtitle="Visão geral da validação do problema"
+        subtitle={`Visão geral da validação do problema · atualiza automaticamente${atualizadoEm ? ` (última: ${atualizadoEm})` : ""}`}
       />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
@@ -91,8 +104,11 @@ export default function DashboardPage() {
           label="Entrevistas realizadas"
           value={`${stats.realizadas}/${stats.total}`}
         />
-        <Stat label="Empresas entrevistadas" value={String(stats.empresasEntrevistadas)} />
-        <Stat label="RHs entrevistados" value={String(stats.rhEntrevistados)} />
+        <Stat label="Oficinas entrevistadas" value={String(stats.empresasEntrevistadas)} />
+        <Stat
+          label="Serviços recusados por prazo"
+          value={String(stats.recusas)}
+        />
         <Stat label="Indicações obtidas" value={String(stats.indicacoes)} />
         <Stat label="Identificaram o problema" value={`${stats.percIdentificaram}%`} />
         <Stat label="Apontaram outro problema" value={`${stats.percOutroProblema}%`} />
@@ -101,9 +117,28 @@ export default function DashboardPage() {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-ink">
-            Entrevistas por status
+          <h2 className="mb-1 text-sm font-semibold text-ink">
+            Validação do problema
           </h2>
+          <p className="mb-4 text-caption text-mid-gray">
+            Meta: {META_ENTREVISTAS} entrevistas e {META_PERC_PROBLEMA}% confirmando o
+            problema
+          </p>
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-canvas">
+            <div
+              className="h-full rounded-full bg-ink transition-all"
+              style={{ width: `${stats.percMeta}%` }}
+            />
+          </div>
+          <p className="mt-3 text-sm text-ink-soft">
+            {stats.realizadas} de {META_ENTREVISTAS} entrevistas ({stats.percMeta}% da
+            meta) ·{" "}
+            {stats.validado ? (
+              <span className="font-medium text-ink">problema validado ✓</span>
+            ) : (
+              "ainda em validação"
+            )}
+          </p>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dadosStatus}>
@@ -153,6 +188,7 @@ export default function DashboardPage() {
                   >
                     <Cell fill="#0a0a0a" />
                     <Cell fill="#e5e5e5" />
+                    <Cell fill="#d4d4d4" />
                   </Pie>
                   <Legend
                     wrapperStyle={{ fontSize: 12, color: "#737373" }}

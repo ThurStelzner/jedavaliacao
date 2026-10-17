@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { apiCreate, apiDelete, apiList, apiUpdate } from "@/lib/api";
 import { AREAS, PORTES } from "@/lib/questions";
-import type { Entrevista, Pergunta, StatusEntrevista } from "@/lib/types";
+import type {
+  ClienteEntendePrazos,
+  Entrevista,
+  Pergunta,
+  RecusouServico,
+  StatusEntrevista,
+} from "@/lib/types";
 import {
   Badge,
   Button,
@@ -41,6 +47,8 @@ function vazio(): Entrevista {
     indicacoes: ["", ""],
     identificouProblema: false,
     outroProblema: "",
+    clienteEntendePrazos: "",
+    recusouServico: "",
     createdAt: "",
   };
 }
@@ -269,13 +277,48 @@ export default function EntrevistasPage() {
                 }
                 className="h-4 w-4"
               />
-              A empresa identificou o problema pesquisado?
+              A oficina identificou o problema pesquisado?
             </label>
             <Field label="Apontou outro problema mais relevante?">
               <Textarea
                 value={form.outroProblema}
                 onChange={(e) => setForm({ ...form, outroProblema: e.target.value })}
               />
+            </Field>
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <Field label="O cliente entende os prazos estimados?">
+              <Select
+                value={form.clienteEntendePrazos ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    clienteEntendePrazos: e.target.value as ClienteEntendePrazos,
+                  })
+                }
+              >
+                <option value="">Não informado</option>
+                <option value="sim">Sim, entende</option>
+                <option value="parcial">Parcialmente</option>
+                <option value="nao">Não entende</option>
+              </Select>
+            </Field>
+            <Field label="Já recusou serviço por não entender o prazo?">
+              <Select
+                value={form.recusouServico ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    recusouServico: e.target.value as RecusouServico,
+                  })
+                }
+              >
+                <option value="">Não informado</option>
+                <option value="sim">Sim, já perdeu serviço</option>
+                <option value="nao">Não</option>
+                <option value="incerto">Não sabe / incerto</option>
+              </Select>
             </Field>
           </div>
 
@@ -320,6 +363,12 @@ export default function EntrevistasPage() {
                     )}
                     {e.outroProblema.trim() && (
                       <Badge variant="outline">outro problema</Badge>
+                    )}
+                    {e.clienteEntendePrazos === "nao" && (
+                      <Badge variant="outline">cliente não entende prazo</Badge>
+                    )}
+                    {e.recusouServico === "sim" && (
+                      <Badge variant="solid">recusou serviço por prazo</Badge>
                     )}
                     {e.indicacoes.filter((i) => i.trim()).length > 0 && (
                       <Badge variant="soft">
