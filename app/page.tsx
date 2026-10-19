@@ -17,7 +17,7 @@ import {
 import { apiList } from "@/lib/api";
 import { calcStats, META_ENTREVISTAS, META_PERC_PROBLEMA, proximosPassos } from "@/lib/stats";
 import type { Entrevista, Lembrete, Tarefa } from "@/lib/types";
-import { ehExemplo, META_CLIENTE, publicoDe } from "@/lib/validacao";
+import { META_CLIENTE, publicoDe } from "@/lib/validacao";
 import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
 
 const CORES_STATUS: Record<string, string> = {
@@ -77,7 +77,6 @@ export default function DashboardPage() {
   );
   const stats = useMemo(() => calcStats(oficina), [oficina]);
   const statsCliente = useMemo(() => calcStats(cliente), [cliente]);
-  const temDemo = useMemo(() => cliente.some(ehExemplo), [cliente]);
   const passos = useMemo(() => proximosPassos(stats), [stats]);
 
   const tarefasPendentes = tarefas.filter((t) => t.status !== "concluida").length;
@@ -140,25 +139,9 @@ export default function DashboardPage() {
             </p>
             <p className="mt-1 text-sm text-ink-soft">
               {cliente.length} de {META_CLIENTE} entrevistas feitas ·{" "}
-              {temDemo ? (
-                <>
-                  <strong className="font-semibold text-ink">
-                    respostas de exemplo
-                  </strong>{" "}
-                  para mostrar como a página fica. A voz real do motorista
-                  entra quando forem ouvidos ({statsCliente.percIdentificaram}%
-                  confirmaram a falta de informação).
-                </>
-              ) : (
-                <>
-                  a voz do motorista ainda não foi ouvida diretamente. Roteiro
-                  pronto na página{" "}
-                  <Link href="/perguntas" className="underline underline-offset-2">
-                    Perguntas
-                  </Link>
-                  .
-                </>
-              )}
+              {statsCliente.percIdentificaram}% ({statsCliente.identificaramProblema}{" "}
+              de {statsCliente.avaliaramProblema}) confirmam a falta de informação
+              · {statsCliente.recusas} já desistiram ou recusaram serviço.
             </p>
           </div>
         </div>
@@ -184,10 +167,7 @@ export default function DashboardPage() {
         />
         <Stat label="Indicações obtidas" value={String(stats.indicacoes)} />
         <Stat label="Identificaram o problema" value={`${stats.percIdentificaram}%`} />
-        <Stat
-          label={temDemo ? "Clientes finais (exemplo)" : "Clientes finais ouvidos"}
-          value={`${cliente.length}/${META_CLIENTE}`}
-        />
+        <Stat label="Clientes finais ouvidos" value={`${cliente.length}/${META_CLIENTE}`} />
         <Stat label="Apontaram outro problema" value={`${stats.percOutroProblema}%`} />
         <Stat label="Tarefas pendentes" value={String(tarefasPendentes)} />
       </div>
@@ -311,19 +291,6 @@ export default function DashboardPage() {
                   Perguntas
                 </Link>
                 ).
-              </li>
-            )}
-            {temDemo && (
-              <li>
-                Ouvir clientes finais de verdade: as {cliente.length} respostas
-                atuais são{" "}
-                <Link
-                  href="/respostas"
-                  className="underline underline-offset-2"
-                >
-                  exemplos de demonstração
-                </Link>
-                .
               </li>
             )}
             {passos.map((p, i) => (

@@ -18,7 +18,6 @@ import { apiList } from "@/lib/api";
 import { calcStats, META_ENTREVISTAS, META_PERC_PROBLEMA } from "@/lib/stats";
 import type { Entrevista, Pergunta, Rodada } from "@/lib/types";
 import {
-  ehExemplo,
   META_CLIENTE,
   publicoDaPergunta,
   publicoDe,
@@ -353,7 +352,6 @@ export default function GraficosPage() {
   const cliente = useMemo(() => entrevistas.filter((e) => publicoDe(e) === "cliente"), [entrevistas]);
   const statsOficina = useMemo(() => calcStats(oficina), [oficina]);
   const statsCliente = useMemo(() => calcStats(cliente), [cliente]);
-  const temDemo = useMemo(() => cliente.some(ehExemplo), [cliente]);
 
   const perguntasBase = useMemo(
     () =>
@@ -911,21 +909,6 @@ export default function GraficosPage() {
 
           {aba === "cliente" && (
             <div className="grid gap-4 lg:grid-cols-2">
-              {temDemo && (
-                <Card className="lg:col-span-2">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Badge variant="solid">Demonstração</Badge>
-                    <p className="text-sm text-ink-soft">
-                      As {cliente.length} entrevistas do cliente final são{" "}
-                      <strong className="font-semibold text-ink">
-                        exemplos criados para mostrar como a página fica
-                      </strong>
-                      . Troque pelas respostas reais quando ouvir os clientes.
-                    </p>
-                  </div>
-                </Card>
-              )}
-
               <Card className="lg:col-span-2">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>

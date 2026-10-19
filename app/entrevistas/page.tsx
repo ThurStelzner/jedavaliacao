@@ -12,7 +12,6 @@ import type {
   StatusEntrevista,
 } from "@/lib/types";
 import {
-  ehExemplo,
   perguntasDoPublico,
   publicoDe,
   ROTULOS_PUBLICO,
@@ -450,7 +449,6 @@ export default function EntrevistasPage() {
                     <Badge variant="soft">
                       {publicoDe(e) === "cliente" ? "Cliente final" : "Oficina"}
                     </Badge>
-                    {ehExemplo(e) && <Badge variant="outline">Demonstração</Badge>}
                     <Badge variant={VARIANTES_STATUS[e.status]}>{e.status}</Badge>
                     {e.identificouProblema && (
                       <Badge variant="solid">

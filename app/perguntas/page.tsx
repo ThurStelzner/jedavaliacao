@@ -6,7 +6,6 @@ import { apiCreate, apiDelete, apiList } from "@/lib/api";
 import type { Entrevista, Pergunta, Publico, Rodada } from "@/lib/types";
 import {
   BLOCOS,
-  ehExemplo,
   perguntasDoBloco,
   publicoDe,
   ROTULOS_PUBLICO,
@@ -64,7 +63,6 @@ export default function PerguntasPage() {
 
   const oficina = entrevistas.filter((e) => publicoDe(e) === "oficina");
   const cliente = entrevistas.filter((e) => publicoDe(e) === "cliente");
-  const temDemoCliente = cliente.some((e) => ehExemplo(e));
 
   return (
     <div>
@@ -117,11 +115,6 @@ export default function PerguntasPage() {
               {cliente.length} entrevista(s) · 5 perguntas de problema · 5 de
               solução
             </p>
-            {temDemoCliente && (
-              <p className="mt-1 text-caption text-mid-gray">
-                Hoje são respostas de exemplo (demonstração).
-              </p>
-            )}
           </div>
         </div>
 

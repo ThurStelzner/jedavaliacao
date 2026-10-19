@@ -16,7 +16,7 @@ import {
 import { apiList } from "@/lib/api";
 import { calcStats, META_ENTREVISTAS, META_PERC_PROBLEMA } from "@/lib/stats";
 import type { Entrevista } from "@/lib/types";
-import { ehExemplo, META_CLIENTE, publicoDe } from "@/lib/validacao";
+import { META_CLIENTE, publicoDe } from "@/lib/validacao";
 import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
 import FluxogramaProblema from "@/components/FluxogramaProblema";
 
@@ -74,7 +74,6 @@ export default function AnalisePage() {
   );
   const stats = useMemo(() => calcStats(oficina), [oficina]);
   const statsCliente = useMemo(() => calcStats(cliente), [cliente]);
-  const temDemo = useMemo(() => cliente.some(ehExemplo), [cliente]);
 
   const dadosProblema = [
     { nome: "Sim, é problema real", valor: stats.identificaramProblema },
@@ -223,9 +222,7 @@ export default function AnalisePage() {
             </p>
           </div>
           <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption text-mid-gray">
-              {temDemo ? "Exemplo · Cliente final" : "A iniciar · Cliente final"}
-            </p>
+            <p className="text-caption text-mid-gray">Cliente final</p>
             <p className="mt-1 text-xl font-semibold text-ink">
               {cliente.length}/{META_CLIENTE}
             </p>
@@ -305,14 +302,8 @@ export default function AnalisePage() {
               O lado de quem recebe o acompanhamento por QR code
             </p>
           </div>
-          <Badge
-            variant={temDemo ? "soft" : cliente.length >= META_CLIENTE ? "solid" : "outline"}
-          >
-            {temDemo
-              ? "Demonstração"
-              : cliente.length >= META_CLIENTE
-                ? "Validado"
-                : "A iniciar"}
+          <Badge variant={cliente.length >= META_CLIENTE ? "solid" : "outline"}>
+            {cliente.length >= META_CLIENTE ? "Validado" : "A iniciar"}
           </Badge>
         </div>
         <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-canvas">
@@ -332,26 +323,15 @@ export default function AnalisePage() {
           {statsCliente.recusas} já desistiram ou recusaram serviço.
         </p>
         <p className="mt-1 text-caption text-mid-gray">
-          {temDemo ? (
-            <>
-              Estas respostas são{" "}
-              <strong className="font-semibold text-ink">
-                exemplos de demonstração
-              </strong>
-              , criados para mostrar como o lado do cliente final aparece. A
-              validação real ainda depende de ouvir motoristas de verdade.
-            </>
-          ) : (
-            <>
-              O roteiro do cliente final (problema e solução) está pronto na
-              página{" "}
-              <a href="/perguntas" className="underline underline-offset-2">
-                Perguntas
-              </a>
-              . Sem essas conversas, a dor do motorista continua sendo a visão da
-              oficina, não a voz dele.
-            </>
-          )}
+          O roteiro do cliente final (problema e solução) está na página{" "}
+          <a href="/perguntas" className="underline underline-offset-2">
+            Perguntas
+          </a>
+          , e as respostas na página{" "}
+          <a href="/respostas" className="underline underline-offset-2">
+            Respostas
+          </a>
+          .
         </p>
       </Card>
 

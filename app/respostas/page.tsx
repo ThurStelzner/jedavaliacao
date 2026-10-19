@@ -6,7 +6,6 @@ import { apiList } from "@/lib/api";
 import { calcStats } from "@/lib/stats";
 import type { Entrevista, Pergunta, Publico } from "@/lib/types";
 import {
-  ehExemplo,
   META_CLIENTE,
   perguntasDoPublico,
   publicoDe,
@@ -76,7 +75,6 @@ export default function RespostasPage() {
   );
   const statsOficina = useMemo(() => calcStats(oficina), [oficina]);
   const statsCliente = useMemo(() => calcStats(cliente), [cliente]);
-  const temDemo = useMemo(() => cliente.some(ehExemplo), [cliente]);
 
   const doLado = lado === "oficina" ? oficina : cliente;
   const stats = lado === "oficina" ? statsOficina : statsCliente;
@@ -150,22 +148,6 @@ export default function RespostasPage() {
           Cliente final ({cliente.length})
         </Button>
       </div>
-
-      {lado === "cliente" && temDemo && (
-        <Card className="mb-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge variant="solid">Demonstração</Badge>
-            <p className="text-sm text-ink-soft">
-              As {cliente.length} respostas do cliente final são{" "}
-              <strong className="font-semibold text-ink">
-                exemplos criados para mostrar como a página fica
-              </strong>
-              . Quando ouvir clientes de verdade, é só cadastrar em Entrevistas
-              e estas podem ser removidas.
-            </p>
-          </div>
-        </Card>
-      )}
 
       <Card className="mb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -290,7 +272,6 @@ export default function RespostasPage() {
                     </span>
                   </span>
                   <span className="hidden flex-wrap items-center gap-2 sm:flex">
-                    {ehExemplo(e) && <Badge variant="soft">Demonstração</Badge>}
                     {e.identificouProblema && (
                       <Badge variant="solid">
                         {lado === "cliente"
@@ -312,7 +293,6 @@ export default function RespostasPage() {
 
                 <div className="border-t border-hairline px-4 pb-4 pt-3">
                   <div className="mb-3 flex flex-wrap items-center gap-2 sm:hidden">
-                    {ehExemplo(e) && <Badge variant="soft">Demonstração</Badge>}
                     {e.identificouProblema && (
                       <Badge variant="solid">
                         {lado === "cliente"
