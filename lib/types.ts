@@ -1,4 +1,6 @@
 export type StatusEntrevista = "planejada" | "agendada" | "realizada";
+export type Publico = "oficina" | "cliente";
+export type Rodada = "problema" | "solucao";
 export type Prioridade = "baixa" | "media" | "alta";
 export type StatusTarefa = "pendente" | "em_andamento" | "concluida";
 export type TipoLembrete = "critico" | "atencao";
@@ -20,6 +22,9 @@ export interface Resposta {
 export interface Pergunta {
   id: string;
   texto: string;
+  publico?: Publico;
+  rodada?: Rodada;
+  ordem?: number;
   createdAt: string;
 }
 
@@ -28,6 +33,7 @@ export interface Entrevista {
   nomeEntrevistado: string;
   empresa: string;
   cargo: string;
+  publico?: Publico;
   porte: string;
   area: string;
   data: string;

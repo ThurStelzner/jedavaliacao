@@ -17,6 +17,7 @@ import {
 import { apiList } from "@/lib/api";
 import { calcStats, META_ENTREVISTAS, META_PERC_PROBLEMA, proximosPassos } from "@/lib/stats";
 import type { Entrevista, Lembrete, Tarefa } from "@/lib/types";
+import { META_CLIENTE, publicoDe } from "@/lib/validacao";
 import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
 
 const CORES_STATUS: Record<string, string> = {
@@ -66,7 +67,16 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const stats = useMemo(() => calcStats(entrevistas), [entrevistas]);
+  const oficina = useMemo(
+    () => entrevistas.filter((e) => publicoDe(e) === "oficina"),
+    [entrevistas],
+  );
+  const cliente = useMemo(
+    () => entrevistas.filter((e) => publicoDe(e) === "cliente"),
+    [entrevistas],
+  );
+  const stats = useMemo(() => calcStats(oficina), [oficina]);
+  const statsCliente = useMemo(() => calcStats(cliente), [cliente]);
   const passos = useMemo(() => proximosPassos(stats), [stats]);
 
   const tarefasPendentes = tarefas.filter((t) => t.status !== "concluida").length;
@@ -97,7 +107,7 @@ export default function DashboardPage() {
     <div>
       <PageHeader
         title="Dashboard"
-        subtitle={`Visão geral da validação do problema · atualiza automaticamente${atualizadoEm ? ` (última: ${atualizadoEm})` : ""}`}
+        subtitle={`Visão geral da validação · ${stats.realizadas} oficina(s) · ${cliente.length} cliente(s) final(is) · atualiza automaticamente${atualizadoEm ? ` (última: ${atualizadoEm})` : ""}`}
       />
 
       <Card className="mb-6">
@@ -105,23 +115,40 @@ export default function DashboardPage() {
           Qual é o problema?
         </p>
         <p className="mt-1.5 text-body text-ink-soft">
-          Oficinas mecânicas têm dificuldade para atualizar os clientes sobre o
-          andamento do serviço porque os mecânicos fazem tudo na oficina, ficam
-          sem organização para responder e só avisam quando o cliente cobra, o que
-          resulta em respostas demoradas e cliente perdido sobre a manutenção dos
-          veículos, tendo que cobrar ou ir à oficina antes de o carro ficar
-          pronto.
+          Oficinas mecânicas perdem organização no dia a dia: o check-in e o
+          andamento do serviço ficam na cabeça de quem está na oficina, e o aviso
+          ao cliente só acontece quando ele cobra. O cliente final, sem
+          informação, liga, reclama ou desiste — e a oficina perde tempo e
+          serviço. A causa está na organização da oficina; a comunicação com o
+          cliente é a consequência.
         </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
+              Lado 1 · Oficina
+            </p>
+            <p className="mt-1 text-sm text-ink-soft">
+              {stats.percIdentificaram}% ({stats.identificaramProblema} de{" "}
+              {stats.avaliaramProblema}) confirmam o problema em {stats.realizadas}{" "}
+              entrevistas · {stats.recusas} já perderam serviço por prazo.
+            </p>
+          </div>
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
+              Lado 2 · Cliente final
+            </p>
+            <p className="mt-1 text-sm text-ink-soft">
+              {cliente.length} de {META_CLIENTE} entrevistas feitas · a voz do
+              motorista ainda não foi ouvida diretamente. Roteiro pronto na
+              página{" "}
+              <Link href="/perguntas" className="underline underline-offset-2">
+                Perguntas
+              </Link>
+              .
+            </p>
+          </div>
+        </div>
         <p className="mt-2 text-caption text-mid-gray">
-          {stats.percIdentificaram}% ({stats.identificaramProblema} de{" "}
-          {stats.avaliaramProblema}) confirmam o problema · {stats.recusas} já
-          perderam serviço por prazo · detalhes na página{" "}
-          <Link href="/analise" className="underline underline-offset-2">
-            Análise
-          </Link>
-          .
-        </p>
-        <p className="mt-1 text-caption text-mid-gray">
           A solução proposta está na página{" "}
           <Link href="/solucoes" className="underline underline-offset-2">
             Solução
@@ -143,6 +170,7 @@ export default function DashboardPage() {
         />
         <Stat label="Indicações obtidas" value={String(stats.indicacoes)} />
         <Stat label="Identificaram o problema" value={`${stats.percIdentificaram}%`} />
+        <Stat label="Clientes finais ouvidos" value={`${cliente.length}/${META_CLIENTE}`} />
         <Stat label="Apontaram outro problema" value={`${stats.percOutroProblema}%`} />
         <Stat label="Tarefas pendentes" value={String(tarefasPendentes)} />
       </div>
@@ -150,7 +178,7 @@ export default function DashboardPage() {
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card>
           <h2 className="mb-1 text-sm font-semibold text-ink">
-            Validação do problema
+            Validação · Oficina
           </h2>
           <p className="mb-4 text-caption text-mid-gray">
             Meta: {META_ENTREVISTAS} entrevistas e {META_PERC_PROBLEMA}% confirmando o
@@ -171,6 +199,26 @@ export default function DashboardPage() {
               "ainda em validação"
             )}
           </p>
+          <div className="mt-4 border-t border-hairline pt-3">
+            <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
+              Lado 2 · Cliente final
+            </p>
+            <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-canvas">
+              <div
+                className="h-full rounded-full bg-mid-gray transition-all"
+                style={{
+                  width: `${Math.min(
+                    Math.round((cliente.length / META_CLIENTE) * 100),
+                    100,
+                  )}%`,
+                }}
+              />
+            </div>
+            <p className="mt-2 text-sm text-ink-soft">
+              {cliente.length} de {META_CLIENTE} entrevistas com motoristas ·{" "}
+              {statsCliente.identificaramProblema} confirmaram a dor
+            </p>
+          </div>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dadosStatus}>
@@ -200,7 +248,7 @@ export default function DashboardPage() {
 
         <Card>
           <h2 className="mb-4 text-sm font-semibold text-ink">
-            O problema foi identificado?
+            Oficina: o problema foi identificado?
           </h2>
           {stats.realizadas === 0 ? (
             <EmptyState>Sem entrevistas realizadas ainda.</EmptyState>
@@ -238,6 +286,16 @@ export default function DashboardPage() {
         <Card>
           <h2 className="mb-4 text-sm font-semibold text-ink">Próximos passos</h2>
           <ol className="list-decimal space-y-2 pl-5 text-sm text-ink-soft marker:text-mid-gray">
+            {cliente.length < META_CLIENTE && (
+              <li>
+                Ouvir o cliente final: {cliente.length} de {META_CLIENTE}{" "}
+                entrevistas com motoristas (roteiro na página{" "}
+                <Link href="/perguntas" className="underline underline-offset-2">
+                  Perguntas
+                </Link>
+                ).
+              </li>
+            )}
             {passos.map((p, i) => (
               <li key={i}>{p}</li>
             ))}

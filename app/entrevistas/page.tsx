@@ -7,9 +7,15 @@ import type {
   ClienteEntendePrazos,
   Entrevista,
   Pergunta,
+  Publico,
   RecusouServico,
   StatusEntrevista,
 } from "@/lib/types";
+import {
+  perguntasDoPublico,
+  publicoDe,
+  ROTULOS_PUBLICO,
+} from "@/lib/validacao";
 import {
   Badge,
   Button,
@@ -36,6 +42,7 @@ function vazio(): Entrevista {
     nomeEntrevistado: "",
     empresa: "",
     cargo: "",
+    publico: "oficina",
     porte: PORTES[2],
     area: AREAS[0],
     data: new Date().toISOString().slice(0, 10),
@@ -61,6 +68,7 @@ export default function EntrevistasPage() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [aberto, setAberto] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [filtroPublico, setFiltroPublico] = useState<"todos" | Publico>("todos");
 
   async function carregar() {
     const [entrevistas, perguntasCarregadas] = await Promise.all([
@@ -82,7 +90,7 @@ export default function EntrevistasPage() {
   }
 
   function editar(e: Entrevista) {
-    setForm(e);
+    setForm({ ...e, publico: publicoDe(e) });
     setEditandoId(e.id);
     setMostrarForm(true);
   }
@@ -138,19 +146,66 @@ export default function EntrevistasPage() {
     await carregar();
   }
 
+  function mudarPublico(publico: Publico) {
+    setForm((f) => ({ ...f, publico, respostas: [] }));
+  }
+
+  const visiveis =
+    filtroPublico === "todos"
+      ? lista
+      : lista.filter((e) => publicoDe(e) === filtroPublico);
+  const perguntasForm = perguntasDoPublico(perguntas, form.publico ?? "oficina");
+  const totalOficina = lista.filter((e) => publicoDe(e) === "oficina").length;
+  const totalCliente = lista.filter((e) => publicoDe(e) === "cliente").length;
+
   return (
     <div>
       <PageHeader
         title="Entrevistas"
-        subtitle={`${lista.length} entrevista(s) cadastrada(s)`}
+        subtitle={`${lista.length} entrevista(s) · ${totalOficina} oficina · ${totalCliente} cliente final`}
         right={<Button onClick={novo}>Nova entrevista</Button>}
       />
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {(
+          [
+            ["todos", `Todos (${lista.length})`],
+            ["oficina", `Oficina (${totalOficina})`],
+            ["cliente", `Cliente final (${totalCliente})`],
+          ] as const
+        ).map(([valor, rotulo]) => (
+          <Button
+            key={valor}
+            variant={filtroPublico === valor ? "primary" : "outline"}
+            onClick={() => setFiltroPublico(valor)}
+          >
+            {rotulo}
+          </Button>
+        ))}
+      </div>
 
       {mostrarForm && (
         <Card className="mb-6">
           <h2 className="mb-4 text-sm font-semibold text-ink">
             {editandoId ? "Editar entrevista" : "Nova entrevista"}
           </h2>
+
+          <div className="mb-4 grid gap-4 sm:grid-cols-2">
+            <Field label="Tipo de entrevista">
+              <Select
+                value={form.publico ?? "oficina"}
+                onChange={(e) => mudarPublico(e.target.value as Publico)}
+              >
+                <option value="oficina">Oficina (dono, recepção, mecânico)</option>
+                <option value="cliente">Cliente final (motorista)</option>
+              </Select>
+            </Field>
+            <div className="rounded-cards border border-hairline bg-surface-alt p-3 text-caption text-mid-gray">
+              {form.publico === "cliente"
+                ? "O cliente final não paga. As perguntas são sobre o que ele vê e acompanha no carro."
+                : "As perguntas são sobre a organização da oficina e a comunicação com o cliente."}
+            </div>
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Nome do entrevistado">
@@ -159,38 +214,50 @@ export default function EntrevistasPage() {
                 onChange={(e) => setForm({ ...form, nomeEntrevistado: e.target.value })}
               />
             </Field>
-            <Field label="Empresa">
+            <Field
+              label={
+                form.publico === "cliente"
+                  ? "Oficina onde é cliente (opcional)"
+                  : "Empresa"
+              }
+            >
               <Input
                 value={form.empresa}
                 onChange={(e) => setForm({ ...form, empresa: e.target.value })}
               />
             </Field>
-            <Field label="Cargo">
+            <Field
+              label={form.publico === "cliente" ? "Ocupação (opcional)" : "Cargo"}
+            >
               <Input
                 value={form.cargo}
                 onChange={(e) => setForm({ ...form, cargo: e.target.value })}
               />
             </Field>
-            <Field label="Porte da empresa">
-              <Select
-                value={form.porte}
-                onChange={(e) => setForm({ ...form, porte: e.target.value })}
-              >
-                {PORTES.map((p) => (
-                  <option key={p}>{p}</option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Área da empresa">
-              <Select
-                value={form.area}
-                onChange={(e) => setForm({ ...form, area: e.target.value })}
-              >
-                {AREAS.map((a) => (
-                  <option key={a}>{a}</option>
-                ))}
-              </Select>
-            </Field>
+            {form.publico === "oficina" && (
+              <>
+                <Field label="Porte da empresa">
+                  <Select
+                    value={form.porte}
+                    onChange={(e) => setForm({ ...form, porte: e.target.value })}
+                  >
+                    {PORTES.map((p) => (
+                      <option key={p}>{p}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Área da empresa">
+                  <Select
+                    value={form.area}
+                    onChange={(e) => setForm({ ...form, area: e.target.value })}
+                  >
+                    {AREAS.map((a) => (
+                      <option key={a}>{a}</option>
+                    ))}
+                  </Select>
+                </Field>
+              </>
+            )}
             <Field label="Data">
               <Input
                 type="date"
@@ -225,13 +292,15 @@ export default function EntrevistasPage() {
           </div>
 
           <div className="mt-4">
-            {perguntas.length === 0 ? (
+            {perguntasForm.length === 0 ? (
               <EmptyState>
-                Nenhuma pergunta cadastrada. Monte o roteiro na página "Perguntas".
+                Nenhuma pergunta cadastrada para{" "}
+                {form.publico === "cliente" ? "o cliente final" : "a oficina"}. Monte o
+                roteiro na página "Perguntas".
               </EmptyState>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
-                {perguntas.map((p, i) => (
+                {perguntasForm.map((p, i) => (
                   <Field key={p.id} label={`${i + 1}. ${p.texto}`}>
                     <Textarea
                       value={form.respostas.find((r) => r.perguntaId === p.id)?.resposta ?? ""}
@@ -277,7 +346,9 @@ export default function EntrevistasPage() {
                 }
                 className="h-4 w-4"
               />
-              A oficina identificou o problema pesquisado?
+              {form.publico === "cliente"
+                ? "O cliente confirmou a falta de informação?"
+                : "A oficina identificou o problema pesquisado?"}
             </label>
             <Field label="Apontou outro problema mais relevante?">
               <Textarea
@@ -288,7 +359,13 @@ export default function EntrevistasPage() {
           </div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <Field label="O cliente entende os prazos estimados?">
+            <Field
+              label={
+                form.publico === "cliente"
+                  ? "O cliente entende o prazo da oficina?"
+                  : "O cliente entende os prazos estimados?"
+              }
+            >
               <Select
                 value={form.clienteEntendePrazos ?? ""}
                 onChange={(e) =>
@@ -304,7 +381,13 @@ export default function EntrevistasPage() {
                 <option value="nao">Não entende</option>
               </Select>
             </Field>
-            <Field label="Já recusou serviço por não entender o prazo?">
+            <Field
+              label={
+                form.publico === "cliente"
+                  ? "Já desistiu ou recusou serviço por atraso ou falta de aviso?"
+                  : "Já recusou serviço por não entender o prazo?"
+              }
+            >
               <Select
                 value={form.recusouServico ?? ""}
                 onChange={(e) =>
@@ -339,11 +422,15 @@ export default function EntrevistasPage() {
         </Card>
       )}
 
-      {lista.length === 0 ? (
-        <EmptyState>Nenhuma entrevista cadastrada. Clique em "Nova entrevista".</EmptyState>
+      {visiveis.length === 0 ? (
+        <EmptyState>
+          {lista.length === 0
+            ? 'Nenhuma entrevista cadastrada. Clique em "Nova entrevista".'
+            : "Nenhuma entrevista deste lado ainda. Troque o filtro ou cadastre uma nova."}
+        </EmptyState>
       ) : (
         <div className="space-y-3">
-          {lista.map((e) => (
+          {visiveis.map((e) => (
             <Card key={e.id}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
@@ -357,9 +444,16 @@ export default function EntrevistasPage() {
                     {e.cargo} · {e.area} · {e.porte} · {e.data || "sem data"}
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge variant="soft">
+                      {publicoDe(e) === "cliente" ? "Cliente final" : "Oficina"}
+                    </Badge>
                     <Badge variant={VARIANTES_STATUS[e.status]}>{e.status}</Badge>
                     {e.identificouProblema && (
-                      <Badge variant="solid">identificou o problema</Badge>
+                      <Badge variant="solid">
+                        {publicoDe(e) === "cliente"
+                          ? "confirmou a dor"
+                          : "identificou o problema"}
+                      </Badge>
                     )}
                     {e.outroProblema.trim() && (
                       <Badge variant="outline">outro problema</Badge>
@@ -404,7 +498,13 @@ export default function EntrevistasPage() {
 
               {aberto === e.id && (
                 <div className="mt-4 space-y-3 border-t border-hairline pt-4">
-                  {perguntas.map((p, i) => {
+                  {perguntasDoPublico(perguntas, publicoDe(e))
+                    .filter((p) =>
+                      e.respostas.some(
+                        (r) => r.perguntaId === p.id && r.resposta.trim(),
+                      ),
+                    )
+                    .map((p, i) => {
                     const r = e.respostas.find((x) => x.perguntaId === p.id)?.resposta;
                     return (
                       <div key={p.id} className="text-sm">
@@ -420,8 +520,9 @@ export default function EntrevistasPage() {
                   {e.respostas
                     .filter(
                       (r) =>
-                        !perguntas.some((p) => p.id === r.perguntaId) &&
-                        r.resposta.trim(),
+                        !perguntasDoPublico(perguntas, publicoDe(e)).some(
+                          (p) => p.id === r.perguntaId,
+                        ) && r.resposta.trim(),
                     )
                     .map((r) => (
                       <div key={r.perguntaId} className="text-sm">

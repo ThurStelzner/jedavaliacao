@@ -16,6 +16,7 @@ import {
 import { apiList } from "@/lib/api";
 import { calcStats, META_ENTREVISTAS, META_PERC_PROBLEMA } from "@/lib/stats";
 import type { Entrevista } from "@/lib/types";
+import { META_CLIENTE, publicoDe } from "@/lib/validacao";
 import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
 import FluxogramaProblema from "@/components/FluxogramaProblema";
 
@@ -63,7 +64,16 @@ export default function AnalisePage() {
     };
   }, []);
 
-  const stats = useMemo(() => calcStats(entrevistas), [entrevistas]);
+  const oficina = useMemo(
+    () => entrevistas.filter((e) => publicoDe(e) === "oficina"),
+    [entrevistas],
+  );
+  const cliente = useMemo(
+    () => entrevistas.filter((e) => publicoDe(e) === "cliente"),
+    [entrevistas],
+  );
+  const stats = useMemo(() => calcStats(oficina), [oficina]);
+  const statsCliente = useMemo(() => calcStats(cliente), [cliente]);
 
   const dadosProblema = [
     { nome: "Sim, é problema real", valor: stats.identificaramProblema },
@@ -105,18 +115,48 @@ export default function AnalisePage() {
           Qual é o problema?
         </p>
         <p className="mt-1.5 text-body text-ink-soft">
-          Oficinas mecânicas têm dificuldade para atualizar os clientes sobre o
-          andamento do serviço porque{" "}
+          A validação tem dois lados. No lado da oficina,{" "}
           <strong className="font-semibold text-ink">
-            os mecânicos fazem tudo na oficina
+            o check-in e o andamento do serviço ficam na cabeça de quem está na
+            oficina
           </strong>
-          , ficam sem organização para responder e só avisam quando o cliente
-          cobra, o que resulta em respostas demoradas e{" "}
+          , sem registro com padrão — o aviso ao cliente só acontece quando ele
+          cobra. No lado do cliente final, a consequência é{" "}
           <strong className="font-semibold text-ink">
-            cliente perdido sobre a manutenção dos veículos
+            ficar sem informação, cobrar, ir à oficina ou desistir do serviço
           </strong>
-          , tendo que cobrar ou ir à oficina antes de o carro ficar pronto.
+          . A causa está na organização da oficina; a comunicação é o efeito.
         </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
+              Lado 1 · Oficina (já ouvida)
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-soft marker:text-mid-gray">
+              <li>Check-in no papel e informação só verbal.</li>
+              <li>Prazo e orçamento "de cabeça", sem registro.</li>
+              <li>Ninguém é dono do aviso; o mecânico não reporta.</li>
+            </ul>
+            <p className="mt-2 text-caption text-mid-gray">
+              {oficina.length} entrevistas · {stats.percIdentificaram}% confirmam ·
+              meta {META_ENTREVISTAS}
+            </p>
+          </div>
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
+              Lado 2 · Cliente final (a ouvir)
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-soft marker:text-mid-gray">
+              <li>Não sabe o andamento sem ligar ou ir lá.</li>
+              <li>Cobra notícia e nem sempre entende o prazo.</li>
+              <li>Sem informação, desiste ou escolhe outra oficina.</li>
+            </ul>
+            <p className="mt-2 text-caption text-mid-gray">
+              {cliente.length} de {META_CLIENTE} entrevistas com motoristas ·
+              roteiro pronto
+            </p>
+          </div>
+        </div>
         <p className="mt-3 text-caption font-semibold uppercase tracking-wide text-mid-gray">
           Sintomas relatados nas entrevistas
         </p>
@@ -166,19 +206,29 @@ export default function AnalisePage() {
           </div>
           <Badge variant="soft">Transparência</Badge>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption text-mid-gray">Firme</p>
+            <p className="text-caption text-mid-gray">Firme · Oficina</p>
             <p className="mt-1 text-xl font-semibold text-ink">64%</p>
             <p className="mt-1 text-caption text-mid-gray">
               14 de 22 entrevistas completas confirmam o problema
             </p>
           </div>
           <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption text-mid-gray">Firme</p>
+            <p className="text-caption text-mid-gray">Firme · Oficina</p>
             <p className="mt-1 text-xl font-semibold text-ink">32%</p>
             <p className="mt-1 text-caption text-mid-gray">
               7 de 22 já perderam serviço por prazo
+            </p>
+          </div>
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-caption text-mid-gray">A iniciar · Cliente final</p>
+            <p className="mt-1 text-xl font-semibold text-ink">
+              {cliente.length}/{META_CLIENTE}
+            </p>
+            <p className="mt-1 text-caption text-mid-gray">
+              entrevistas com motoristas · {statsCliente.identificaramProblema}{" "}
+              confirmaram a dor
             </p>
           </div>
           <div className="rounded-cards border border-hairline bg-surface-alt p-3">
@@ -239,6 +289,46 @@ export default function AnalisePage() {
           {Math.max(stats.realizadas - stats.avaliaramProblema, 0)} demais focaram
           outros temas (ex.: check-in e retrabalho) e aparecem como "Não avaliaram"
           nos gráficos. Os percentuais consideram quem avaliou o problema.
+        </p>
+      </Card>
+
+      <Card className="mt-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">
+              Validação · Cliente final
+            </h2>
+            <p className="mt-1 text-caption text-mid-gray">
+              O lado de quem recebe o acompanhamento por QR code
+            </p>
+          </div>
+          <Badge variant={cliente.length >= META_CLIENTE ? "solid" : "outline"}>
+            {cliente.length >= META_CLIENTE ? "Validado" : "A iniciar"}
+          </Badge>
+        </div>
+        <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-canvas">
+          <div
+            className="h-full rounded-full bg-mid-gray transition-all"
+            style={{
+              width: `${Math.min(
+                Math.round((cliente.length / META_CLIENTE) * 100),
+                100,
+              )}%`,
+            }}
+          />
+        </div>
+        <p className="mt-3 text-sm text-ink-soft">
+          {cliente.length} de {META_CLIENTE} entrevistas com motoristas ·{" "}
+          {statsCliente.identificaramProblema} confirmaram a falta de informação ·{" "}
+          {statsCliente.recusas} já desistiram ou recusaram serviço.
+        </p>
+        <p className="mt-1 text-caption text-mid-gray">
+          O roteiro do cliente final (problema e solução) está pronto na página{" "}
+          <a href="/perguntas" className="underline underline-offset-2">
+            Perguntas
+          </a>
+          . Sem essas conversas, a dor do motorista continua sendo a visão da
+          oficina, não a voz dele.
         </p>
       </Card>
 

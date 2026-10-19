@@ -58,6 +58,16 @@ export default function PitchPage() {
             precisa instalar aplicativo nem criar conta.
           </p>
           <p className="mt-3 text-sm text-ink-soft">
+            São <strong className="font-semibold text-ink">dois usuários</strong>{" "}
+            com papéis diferentes. A{" "}
+            <strong className="font-semibold text-ink">oficina</strong> (dono,
+            recepção e mecânico) paga a assinatura e opera o check-in e o painel. O{" "}
+            <strong className="font-semibold text-ink">cliente final</strong>{" "}
+            (motorista) não paga nada, não baixa app e não cria conta: só acompanha
+            o carro pelo QR code. A validação também tem dois lados — já ouvimos 26
+            oficinas; o cliente final ainda será ouvido com um roteiro próprio.
+          </p>
+          <p className="mt-3 text-sm text-ink-soft">
             O dono usa o painel para a gestão: vê a fila inteira, o problema
             relatado de cada carro, o que foi diagnosticado, o que está pendente e o
             histórico por carro e por cliente, sem depender da memória.
@@ -268,6 +278,12 @@ export default function PitchPage() {
             <strong className="font-semibold text-ink">64% confirmam o problema</strong>{" "}
             e <strong className="font-semibold text-ink">32% já perderam serviço por
             prazo</strong>, ambos sobre as 22 entrevistas completas.
+          </p>
+          <p className="mt-2 text-sm text-ink-soft">
+            Falta ouvir o <strong className="font-semibold text-ink">cliente
+            final</strong>: as 26 entrevistas foram com donos, gerentes e mecânicos.
+            O roteiro com as perguntas de problema e de solução do motorista já está
+            pronto — a meta é de 10 conversas, na saída da oficina ou por indicação.
           </p>
           <p className="mt-3 text-caption text-mid-gray">
             Números e fontes também nas páginas{" "}

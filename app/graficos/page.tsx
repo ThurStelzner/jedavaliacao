@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Bar,
   BarChart,
@@ -16,6 +17,13 @@ import {
 import { apiList } from "@/lib/api";
 import { calcStats, META_ENTREVISTAS, META_PERC_PROBLEMA } from "@/lib/stats";
 import type { Entrevista, Pergunta } from "@/lib/types";
+import {
+  META_CLIENTE,
+  METRICAS_BETA,
+  publicoDaPergunta,
+  publicoDe,
+  rodadaDaPergunta,
+} from "@/lib/validacao";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 
 const tickStyle = { fill: "#737373", fontSize: 12 };
@@ -49,6 +57,60 @@ const rotuloPercentual = (p: RotuloProps) => (
     {`${Math.round((p.percent ?? 0) * 100)}% (${p.value ?? 0})`}
   </text>
 );
+
+function PizzaCard({
+  titulo,
+  subtitulo,
+  dados,
+  vazio,
+}: {
+  titulo: string;
+  subtitulo: string;
+  dados: Array<{ nome: string; valor: number; cor: string }>;
+  vazio: string;
+}) {
+  return (
+    <Card>
+      <h2 className="mb-1 text-sm font-semibold text-ink">{titulo}</h2>
+      <p className="mb-3 text-caption text-mid-gray">{subtitulo}</p>
+      {dados.length === 0 ? (
+        <div className="flex h-64 flex-col items-center justify-center rounded-cards border border-dashed border-hairline bg-surface-alt p-4 text-center">
+          <p className="text-sm font-medium text-ink">Aguardando entrevistas</p>
+          <p className="mt-1 text-caption text-mid-gray">{vazio}</p>
+          <Link
+            href="/entrevistas"
+            className="mt-3 text-caption font-medium text-ink underline underline-offset-2"
+          >
+            Registrar entrevista com cliente
+          </Link>
+        </div>
+      ) : (
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={dados}
+                dataKey="valor"
+                nameKey="nome"
+                outerRadius={85}
+                label={rotuloPercentual}
+              >
+                {dados.map((d) => (
+                  <Cell key={d.nome} fill={d.cor} />
+                ))}
+              </Pie>
+              <Legend
+                wrapperStyle={{ fontSize: 12, color: "#737373" }}
+                iconType="circle"
+              />
+              <Tooltip contentStyle={tooltipStyle} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </Card>
+  );
+}
 
 const MERCADO = [
   {
@@ -252,23 +314,108 @@ export default function GraficosPage() {
     };
   }, []);
 
-  const stats = useMemo(() => calcStats(entrevistas), [entrevistas]);
+  const oficina = useMemo(
+    () => entrevistas.filter((e) => publicoDe(e) === "oficina"),
+    [entrevistas],
+  );
+  const cliente = useMemo(
+    () => entrevistas.filter((e) => publicoDe(e) === "cliente"),
+    [entrevistas],
+  );
+  const statsOficina = useMemo(() => calcStats(oficina), [oficina]);
+  const statsCliente = useMemo(() => calcStats(cliente), [cliente]);
+  const perguntasBase = useMemo(
+    () =>
+      perguntas
+        .filter(
+          (p) =>
+            publicoDaPergunta(p) === "oficina" &&
+            rodadaDaPergunta(p) === "problema",
+        )
+        .sort(
+          (a, b) =>
+            (a.ordem ?? 0) - (b.ordem ?? 0) ||
+            a.createdAt.localeCompare(b.createdAt),
+        ),
+    [perguntas],
+  );
+
+  // Cobertura dos dois lados: quantas entrevistas cada público já tem.
+  const cobertura = useMemo(
+    () => [
+      { nome: "Oficina", total: oficina.length, meta: META_ENTREVISTAS },
+      { nome: "Cliente final", total: cliente.length, meta: META_CLIENTE },
+    ],
+    [oficina.length, cliente.length],
+  );
+
+  // Cliente final: dados diretos (quando existirem entrevistas com motoristas).
+  const dadosClienteProblema = useMemo(
+    () =>
+      [
+        {
+          nome: "Confirmam a falta de informação",
+          valor: statsCliente.identificaramProblema,
+          cor: "#15803d",
+        },
+        {
+          nome: "Não confirmam",
+          valor: Math.max(
+            statsCliente.avaliaramProblema - statsCliente.identificaramProblema,
+            0,
+          ),
+          cor: "#0a0a0a",
+        },
+      ].filter((d) => d.valor > 0),
+    [statsCliente],
+  );
+
+  const dadosClientePrazo = useMemo(() => {
+    const valor = (faixa: string) =>
+      statsCliente.porClienteEntendePrazos.find((f) => f.faixa === faixa)
+        ?.total ?? 0;
+    return [
+      { nome: "Entendem o prazo", valor: valor("sim"), cor: "#15803d" },
+      { nome: "Entendem em parte", valor: valor("parcial"), cor: "#a3a3a3" },
+      { nome: "Não entendem", valor: valor("nao"), cor: "#dc2626" },
+      {
+        nome: "Sem resposta",
+        valor: valor("Não informado") + valor("Não avaliaram o prazo"),
+        cor: "#e5e5e5",
+      },
+    ].filter((d) => d.valor > 0);
+  }, [statsCliente]);
+
+  const dadosClienteRecusa = useMemo(() => {
+    const valor = (faixa: string) =>
+      statsCliente.porRecusa.find((f) => f.faixa === faixa)?.total ?? 0;
+    return [
+      { nome: "Já desistiram/recusaram", valor: valor("sim"), cor: "#dc2626" },
+      { nome: "Não recusaram", valor: valor("nao"), cor: "#0a0a0a" },
+      { nome: "Incerto", valor: valor("incerto"), cor: "#a3a3a3" },
+      {
+        nome: "Sem resposta",
+        valor: valor("Não informado") + valor("Não avaliaram o prazo"),
+        cor: "#e5e5e5",
+      },
+    ].filter((d) => d.valor > 0);
+  }, [statsCliente]);
 
   // 1) Aprovação × negação do problema (base: quem avaliou o problema)
   const dadosProblema = useMemo(
     () => [
       {
         nome: "Confirmam o problema",
-        valor: stats.identificaramProblema,
+        valor: statsOficina.identificaramProblema,
         cor: "#15803d",
       },
       {
         nome: "Não confirmam",
-        valor: Math.max(stats.avaliaramProblema - stats.identificaramProblema, 0),
+        valor: Math.max(statsOficina.avaliaramProblema - statsOficina.identificaramProblema, 0),
         cor: "#0a0a0a",
       },
     ],
-    [stats],
+    [statsOficina],
   );
 
   // 2) Recusa de serviço por prazo (base: quem avaliou o problema)
@@ -282,20 +429,20 @@ export default function GraficosPage() {
         .map((m) => ({
           nome: m.nome,
           cor: m.cor,
-          valor: stats.porRecusa.find((f) => f.faixa === m.faixa)?.total ?? 0,
+          valor: statsOficina.porRecusa.find((f) => f.faixa === m.faixa)?.total ?? 0,
         }))
         .filter((d) => d.valor > 0),
-    [stats],
+    [statsOficina],
   );
 
   // 4) Respostas por pergunta (respondidas × não abordadas × sem resposta)
   const respostaPorPergunta = useMemo(
     () =>
-      perguntas.map((p, i) => {
+      perguntasBase.map((p, i) => {
         let respondidas = 0;
         let naoAbordadas = 0;
         let semResposta = 0;
-        for (const e of entrevistas) {
+        for (const e of oficina) {
           const r = e.respostas.find((x) => x.perguntaId === p.id)?.resposta ?? "";
           const t = r.trim();
           if (!t) semResposta += 1;
@@ -310,7 +457,7 @@ export default function GraficosPage() {
           texto: p.texto,
         };
       }),
-    [perguntas, entrevistas],
+    [perguntasBase, oficina],
   );
 
   // 5) Confirmam por porte (empilhado)
@@ -319,7 +466,7 @@ export default function GraficosPage() {
       string,
       { sim: number; nao: number; naoAvaliaram: number }
     >();
-    for (const e of entrevistas) {
+    for (const e of oficina) {
       const p = e.porte || "Não informado";
       const atual = map.get(p) ?? { sim: 0, nao: 0, naoAvaliaram: 0 };
       if (!avaliouProblema(e)) atual.naoAvaliaram += 1;
@@ -328,43 +475,43 @@ export default function GraficosPage() {
       map.set(p, atual);
     }
     return Array.from(map.entries()).map(([nome, v]) => ({ nome, ...v }));
-  }, [entrevistas]);
+  }, [oficina]);
 
   // 6) Funil de validação (confirmação e recusa: % sobre quem avaliou o problema)
   const funil = useMemo(() => {
-    const base = stats.realizadas || 1;
-    const baseAval = stats.avaliaramProblema || 1;
+    const base = statsOficina.realizadas || 1;
+    const baseAval = statsOficina.avaliaramProblema || 1;
     return [
       {
         rotulo: "Entrevistas realizadas",
-        valor: stats.realizadas,
+        valor: statsOficina.realizadas,
         cor: "#0a0a0a",
         perc: 100,
       },
       {
         rotulo: "Avaliaram o problema de prazo",
-        valor: stats.avaliaramProblema,
+        valor: statsOficina.avaliaramProblema,
         cor: "#7C5AC8",
-        perc: Math.round((stats.avaliaramProblema / base) * 100),
+        perc: Math.round((statsOficina.avaliaramProblema / base) * 100),
       },
       {
         rotulo: "Confirmam o problema",
-        valor: stats.identificaramProblema,
+        valor: statsOficina.identificaramProblema,
         cor: "#15803d",
-        perc: Math.round((stats.identificaramProblema / baseAval) * 100),
+        perc: Math.round((statsOficina.identificaramProblema / baseAval) * 100),
       },
       {
         rotulo: "Já perderam serviço por prazo",
-        valor: stats.recusas,
+        valor: statsOficina.recusas,
         cor: "#dc2626",
-        perc: Math.round((stats.recusas / baseAval) * 100),
+        perc: Math.round((statsOficina.recusas / baseAval) * 100),
       },
     ];
-  }, [stats]);
+  }, [statsOficina]);
 
   // 7) Canal do aviso ao cliente (pergunta 4 do roteiro)
   const canalAviso = useMemo(() => {
-    const id = perguntas[3]?.id;
+    const id = perguntasBase[3]?.id;
     const cont: Record<CanalAviso, number> = {
       whatsapp: 0,
       telefone: 0,
@@ -372,7 +519,7 @@ export default function GraficosPage() {
       ninguem: 0,
     };
     let base = 0;
-    for (const e of entrevistas) {
+    for (const e of oficina) {
       const c = classificarCanal(textoResposta(e, id));
       if (c) {
         cont[c] += 1;
@@ -392,11 +539,11 @@ export default function GraficosPage() {
         { nome: "Ninguém avisa", valor: cont.ninguem, cor: "#dc2626" },
       ].filter((d) => d.valor > 0),
     };
-  }, [entrevistas, perguntas]);
+  }, [oficina, perguntasBase]);
 
   // 8) Padrão do aviso (pergunta 4 do roteiro)
   const padraoAviso = useMemo(() => {
-    const id = perguntas[3]?.id;
+    const id = perguntasBase[3]?.id;
     const cont: Record<PadraoAviso, number> = {
       semPadrao: 0,
       fotoVideo: 0,
@@ -405,7 +552,7 @@ export default function GraficosPage() {
       naoAvisa: 0,
     };
     let base = 0;
-    for (const e of entrevistas) {
+    for (const e of oficina) {
       const c = classificarPadrao(textoResposta(e, id));
       if (c) {
         cont[c] += 1;
@@ -430,14 +577,14 @@ export default function GraficosPage() {
         { nome: "Não avisa", valor: cont.naoAvisa, cor: "#0a0a0a" },
       ].filter((d) => d.valor > 0),
     };
-  }, [entrevistas, perguntas]);
+  }, [oficina, perguntasBase]);
 
   // 9) Prazo por escrito (pergunta 3 do roteiro)
   const prazoEscrito = useMemo(() => {
-    const id = perguntas[2]?.id;
+    const id = perguntasBase[2]?.id;
     let escrito = 0;
     let falado = 0;
-    for (const e of entrevistas) {
+    for (const e of oficina) {
       const c = classificarPrazoEscrito(textoResposta(e, id));
       if (c === "escrito") escrito += 1;
       else if (c === "falado") falado += 1;
@@ -453,7 +600,7 @@ export default function GraficosPage() {
         },
       ].filter((d) => d.valor > 0),
     };
-  }, [entrevistas, perguntas]);
+  }, [oficina, perguntasBase]);
 
   // 10) Check-in, sistemas e adoção (anotações + respostas)
   const checkinSistema = useMemo(() => {
@@ -462,7 +609,7 @@ export default function GraficosPage() {
     let sistema = 0;
     let quer = 0;
     let barreira = 0;
-    for (const e of entrevistas) {
+    for (const e of oficina) {
       const c = classificarCheckin(e);
       if (c) {
         chk[c] += 1;
@@ -474,20 +621,20 @@ export default function GraficosPage() {
         if (citaBarreiraAdocao(e)) barreira += 1;
       }
     }
-    return { chk, baseChk, sistema, total: entrevistas.length, quer, barreira };
-  }, [entrevistas]);
+    return { chk, baseChk, sistema, total: oficina.length, quer, barreira };
+  }, [oficina]);
 
   // 11) Aperto do dia a dia (P1, P4 e P5)
   const apertoDia = useMemo(() => {
-    const p1 = perguntas[0]?.id;
-    const p4 = perguntas[3]?.id;
-    const p5 = perguntas[4]?.id;
+    const p1 = perguntasBase[0]?.id;
+    const p4 = perguntasBase[3]?.id;
+    const p5 = perguntasBase[4]?.id;
     let baseRoteiro = 0;
     let prazoEstoura = 0;
     let cobra = 0;
     let baseDono = 0;
     let dono = 0;
-    for (const e of entrevistas) {
+    for (const e of oficina) {
       const t1 = textoResposta(e, p1).toLowerCase();
       if (t1 && !t1.startsWith("não abordado")) {
         baseRoteiro += 1;
@@ -517,45 +664,45 @@ export default function GraficosPage() {
       }
     }
     return { baseRoteiro, prazoEstoura, cobra, baseDono, dono };
-  }, [entrevistas, perguntas]);
+  }, [oficina, perguntasBase]);
 
   // 12) Foto/vídeo no aviso ao cliente (P4)
   const fotoVideoCount = useMemo(() => {
-    const id = perguntas[3]?.id;
+    const id = perguntasBase[3]?.id;
     let total = 0;
     let base = 0;
-    for (const e of entrevistas) {
+    for (const e of oficina) {
       const t = textoResposta(e, id).toLowerCase();
       if (!classificarCanal(textoResposta(e, id))) continue;
       base += 1;
       if (t.includes("foto") || t.includes("vídeo")) total += 1;
     }
     return { total, base };
-  }, [entrevistas, perguntas]);
+  }, [oficina, perguntasBase]);
 
   // 13) Entrevistas por área
   const porArea = useMemo(() => {
     const map = new Map<string, number>();
-    for (const e of entrevistas) {
+    for (const e of oficina) {
       const a = e.area || "Não informado";
       map.set(a, (map.get(a) ?? 0) + 1);
     }
     return Array.from(map.entries())
       .map(([nome, total]) => ({ nome, total }))
       .sort((a, b) => b.total - a.total);
-  }, [entrevistas]);
+  }, [oficina]);
 
   // 14) Entrevistas por porte
   const porPorteGeral = useMemo(() => {
     const map = new Map<string, number>();
-    for (const e of entrevistas) {
+    for (const e of oficina) {
       const p = e.porte || "Não informado";
       map.set(p, (map.get(p) ?? 0) + 1);
     }
     return Array.from(map.entries())
       .map(([nome, total]) => ({ nome, total }))
       .sort((a, b) => b.total - a.total);
-  }, [entrevistas]);
+  }, [oficina]);
 
   // 15) Confirmação do problema por área
   const problemaPorArea = useMemo(() => {
@@ -563,7 +710,7 @@ export default function GraficosPage() {
       string,
       { sim: number; nao: number; naoAvaliaram: number }
     >();
-    for (const e of entrevistas) {
+    for (const e of oficina) {
       const a = e.area || "Não informado";
       const atual = map.get(a) ?? { sim: 0, nao: 0, naoAvaliaram: 0 };
       if (!avaliouProblema(e)) atual.naoAvaliaram += 1;
@@ -572,7 +719,7 @@ export default function GraficosPage() {
       map.set(a, atual);
     }
     return Array.from(map.entries()).map(([nome, v]) => ({ nome, ...v }));
-  }, [entrevistas]);
+  }, [oficina]);
 
   // 16) Recusa de serviço por responsável
   const recusaPorResponsavel = useMemo(() => {
@@ -580,7 +727,7 @@ export default function GraficosPage() {
       string,
       { sim: number; nao: number; incerto: number; naoAvaliaram: number }
     >();
-    for (const e of entrevistas) {
+    for (const e of oficina) {
       const r = (e.responsavel || "Não informado").trim() || "Não informado";
       const atual = map.get(r) ?? {
         sim: 0,
@@ -596,12 +743,12 @@ export default function GraficosPage() {
       map.set(r, atual);
     }
     return Array.from(map.entries()).map(([nome, v]) => ({ nome, ...v }));
-  }, [entrevistas]);
+  }, [oficina]);
 
   // 17) Indicações por responsável
   const indicacoesPorResponsavel = useMemo(() => {
     const map = new Map<string, number>();
-    for (const e of entrevistas.filter((x) => x.status === "realizada")) {
+    for (const e of oficina.filter((x) => x.status === "realizada")) {
       const r = (e.responsavel || "Não informado").trim() || "Não informado";
       const qtd = e.indicacoes.filter((i) => i.trim()).length;
       map.set(r, (map.get(r) ?? 0) + qtd);
@@ -609,12 +756,12 @@ export default function GraficosPage() {
     return Array.from(map.entries())
       .map(([nome, total]) => ({ nome, total }))
       .sort((a, b) => b.total - a.total);
-  }, [entrevistas]);
+  }, [oficina]);
 
   // 18) Status das entrevistas
   const statusEntrevistas = useMemo(() => {
     const map = new Map<string, number>();
-    for (const e of entrevistas) {
+    for (const e of oficina) {
       map.set(e.status, (map.get(e.status) ?? 0) + 1);
     }
     const rotulos: Record<string, string> = {
@@ -626,24 +773,24 @@ export default function GraficosPage() {
       nome: rotulos[status] ?? status,
       total,
     }));
-  }, [entrevistas]);
+  }, [oficina]);
 
   if (carregando) {
     return <PageHeader title="Gráficos" subtitle="Carregando..." />;
   }
 
-  const semDados = entrevistas.length === 0;
+  const semDados = oficina.length === 0 && cliente.length === 0;
 
-  const baseAvaliaram = stats.avaliaramProblema || 1;
-  const percNegam = stats.avaliaramProblema
+  const baseAvaliaram = statsOficina.avaliaramProblema || 1;
+  const percNegam = statsOficina.avaliaramProblema
     ? Math.round(
-        ((stats.avaliaramProblema - stats.identificaramProblema) /
+        ((statsOficina.avaliaramProblema - statsOficina.identificaramProblema) /
           baseAvaliaram) *
           100,
       )
     : 0;
-  const percRecusas = stats.avaliaramProblema
-    ? Math.round((stats.recusas / baseAvaliaram) * 100)
+  const percRecusas = statsOficina.avaliaramProblema
+    ? Math.round((statsOficina.recusas / baseAvaliaram) * 100)
     : 0;
   const linhasCheckin = [
     {
@@ -671,13 +818,13 @@ export default function GraficosPage() {
       cor: "#7C5AC8",
     },
     {
-      rotulo: "Usariam algo online (check-in/aviso)",
+      rotulo: "Citaram querer algo online (check-in/aviso)",
       valor: checkinSistema.quer,
-      base: checkinSistema.quer,
+      base: checkinSistema.total,
       cor: "#15803d",
     },
     {
-      rotulo: "Barreira citada: custo / complexidade",
+      rotulo: "Barreira entre quem quer: custo / complexidade",
       valor: checkinSistema.barreira,
       base: checkinSistema.quer,
       cor: "#dc2626",
@@ -724,7 +871,7 @@ export default function GraficosPage() {
     <div>
       <PageHeader
         title="Gráficos"
-        subtitle={`Área de gráficos da validação · ${entrevistas.length} entrevistas · atualiza automaticamente${atualizadoEm ? ` (última: ${atualizadoEm})` : ""}`}
+        subtitle={`Validação dos dois lados · ${oficina.length} oficina(s) · ${cliente.length} cliente(s) final(is) · atualiza automaticamente${atualizadoEm ? ` (última: ${atualizadoEm})` : ""}`}
       />
 
       {semDados ? (
@@ -738,26 +885,124 @@ export default function GraficosPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-ink">
+                  Cobertura dos dois lados
+                </h2>
+                <p className="mt-1 text-caption text-mid-gray">
+                  A oficina já foi ouvida. O cliente final ainda não.
+                </p>
+              </div>
+              <Badge
+                variant={cliente.length >= META_CLIENTE ? "solid" : "outline"}
+              >
+                {cliente.length >= META_CLIENTE
+                  ? "Cliente validado"
+                  : "Cliente a iniciar"}
+              </Badge>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+                <p className="text-caption text-mid-gray">Oficina</p>
+                <p className="mt-1 text-xl font-semibold text-ink">
+                  {oficina.length}{" "}
+                  <span className="text-sm font-normal text-mid-gray">
+                    de {META_ENTREVISTAS}
+                  </span>
+                </p>
+                <p className="mt-1 text-caption text-mid-gray">
+                  {statsOficina.percIdentificaram}% confirmam o problema ·{" "}
+                  {statsOficina.recusas} já perderam serviço por prazo
+                </p>
+              </div>
+              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+                <p className="text-caption text-mid-gray">Cliente final</p>
+                <p className="mt-1 text-xl font-semibold text-ink">
+                  {cliente.length}{" "}
+                  <span className="text-sm font-normal text-mid-gray">
+                    de {META_CLIENTE}
+                  </span>
+                </p>
+                <p className="mt-1 text-caption text-mid-gray">
+                  roteiro pronto · entrevistas com motoristas pendentes
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={cobertura}
+                  layout="vertical"
+                  margin={{ top: 4, right: 16, bottom: 4, left: 8 }}
+                >
+                  <XAxis
+                    type="number"
+                    allowDecimals={false}
+                    tickLine={false}
+                    axisLine={{ stroke: "#e5e5e5" }}
+                    tick={tickStyle}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="nome"
+                    width={100}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={tickStyle}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "#f5f5f5" }}
+                    contentStyle={tooltipStyle}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12, color: "#737373" }} />
+                  <Bar
+                    dataKey="total"
+                    name="Entrevistas"
+                    fill="#0a0a0a"
+                    radius={[0, 6, 6, 0]}
+                  />
+                  <Bar
+                    dataKey="meta"
+                    name="Meta"
+                    fill="#e5e5e5"
+                    radius={[0, 6, 6, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <div className="mt-2 lg:col-span-2">
+            <h2 className="text-sm font-semibold text-ink">
+              1. Oficina — o problema
+            </h2>
+            <p className="text-caption text-mid-gray">
+              O que as 26 entrevistas com donos, recepção e mecânicos mostram
+              sobre prazo, organização e comunicação.
+            </p>
+          </div>
+          <Card className="lg:col-span-2">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-ink">
                   Validação do problema
                 </h2>
                 <p className="mt-1 text-caption text-mid-gray">
-                  {stats.realizadas} entrevistas realizadas · Meta:{" "}
+                  {statsOficina.realizadas} entrevistas realizadas · Meta:{" "}
                   {META_ENTREVISTAS} entrevistas e {META_PERC_PROBLEMA}% das oficinas
                   confirmando o problema
                 </p>
               </div>
-              <Badge variant={stats.validado ? "solid" : "soft"}>
-                {stats.validado ? "Problema validado ✓" : "Ainda em validação"}
+              <Badge variant={statsOficina.validado ? "solid" : "soft"}>
+                {statsOficina.validado ? "Problema validado ✓" : "Ainda em validação"}
               </Badge>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-cards border border-hairline bg-surface-alt p-3">
                 <p className="text-caption text-mid-gray">Confirmam o problema</p>
                 <p className="mt-1 text-xl font-semibold text-ink">
-                  {stats.percIdentificaram}%
+                  {statsOficina.percIdentificaram}%
                 </p>
                 <p className="mt-1 text-caption text-mid-gray">
-                  {stats.identificaramProblema} de {stats.avaliaramProblema} que
+                  {statsOficina.identificaramProblema} de {statsOficina.avaliaramProblema} que
                   avaliaram o problema
                 </p>
               </div>
@@ -767,8 +1012,8 @@ export default function GraficosPage() {
                   {percNegam}%
                 </p>
                 <p className="mt-1 text-caption text-mid-gray">
-                  {stats.avaliaramProblema - stats.identificaramProblema} de{" "}
-                  {stats.avaliaramProblema} que avaliaram o problema
+                  {statsOficina.avaliaramProblema - statsOficina.identificaramProblema} de{" "}
+                  {statsOficina.avaliaramProblema} que avaliaram o problema
                 </p>
               </div>
               <div className="rounded-cards border border-hairline bg-surface-alt p-3">
@@ -776,10 +1021,10 @@ export default function GraficosPage() {
                   Não avaliaram o problema
                 </p>
                 <p className="mt-1 text-xl font-semibold text-ink">
-                  {stats.realizadas - stats.avaliaramProblema}
+                  {statsOficina.realizadas - statsOficina.avaliaramProblema}
                 </p>
                 <p className="mt-1 text-caption text-mid-gray">
-                  das {stats.realizadas} entrevistas realizadas
+                  das {statsOficina.realizadas} entrevistas realizadas
                 </p>
               </div>
               <div className="rounded-cards border border-hairline bg-surface-alt p-3">
@@ -787,7 +1032,7 @@ export default function GraficosPage() {
                   Já perderam serviço por prazo
                 </p>
                 <p className="mt-1 text-xl font-semibold text-ink">
-                  {stats.recusas}
+                  {statsOficina.recusas}
                 </p>
                 <p className="mt-1 text-caption text-mid-gray">
                   recusas de serviço registradas
@@ -801,9 +1046,9 @@ export default function GraficosPage() {
               O problema é real? (aprovação × negação)
             </h2>
             <p className="mb-3 text-caption text-mid-gray">
-              {stats.realizadas} entrevistas realizadas — {stats.avaliaramProblema}{" "}
+              {statsOficina.realizadas} entrevistas realizadas — {statsOficina.avaliaramProblema}{" "}
               avaliaram o problema de prazo (
-              {stats.realizadas - stats.avaliaramProblema} não avaliaram)
+              {statsOficina.realizadas - statsOficina.avaliaramProblema} não avaliaram)
             </p>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -829,13 +1074,23 @@ export default function GraficosPage() {
             </div>
           </Card>
 
+          <div className="mt-2 lg:col-span-2">
+            <h2 className="text-sm font-semibold text-ink">
+              2. Cliente final — o que a oficina relata
+            </h2>
+            <p className="text-caption text-mid-gray">
+              A visão da oficina sobre o comportamento e a comunicação com o
+              motorista. Ainda não é a voz do cliente final.
+            </p>
+          </div>
+
           <Card>
             <h2 className="mb-1 text-sm font-semibold text-ink">
               Já recusou serviço por causa do prazo?
             </h2>
             <p className="mb-3 text-caption text-mid-gray">
-              {stats.realizadas} entrevistas realizadas — {stats.recusas} das{" "}
-              {stats.avaliaramProblema} que avaliaram já perderam serviço por não
+              {statsOficina.realizadas} entrevistas realizadas — {statsOficina.recusas} das{" "}
+              {statsOficina.avaliaramProblema} que avaliaram já perderam serviço por não
               entender o prazo
             </p>
             <div className="h-64">
@@ -868,7 +1123,7 @@ export default function GraficosPage() {
             </h2>
             <p className="mb-3 text-caption text-mid-gray">
               De {canalAviso.base} entrevistas que descreveram como avisam o
-              cliente (pergunta 4 do roteiro), de {stats.realizadas} realizadas
+              cliente (pergunta 4 do roteiro), de {statsOficina.realizadas} realizadas
             </p>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -959,6 +1214,16 @@ export default function GraficosPage() {
             </div>
           </Card>
 
+          <div className="mt-2 lg:col-span-2">
+            <h2 className="text-sm font-semibold text-ink">
+              3. Oficina — como o serviço acontece hoje
+            </h2>
+            <p className="text-caption text-mid-gray">
+              Check-in, sistemas e o aperto do dia a dia. É aqui que a solução
+              precisa caber sem virar mais uma tarefa.
+            </p>
+          </div>
+
           <Card>
             <h2 className="mb-1 text-sm font-semibold text-ink">
               Check-in hoje: como é feito
@@ -1021,37 +1286,117 @@ export default function GraficosPage() {
             </div>
           </Card>
 
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Sugestão: perguntas para a próxima rodada
+          <div className="mt-2 lg:col-span-2">
+            <h2 className="text-sm font-semibold text-ink">
+              4. Cliente final — o que falta ouvir
             </h2>
-            <p className="mb-3 text-caption text-mid-gray">
-              Em cima do que já apareceu sobre check-in, sistemas e aviso ao
-              cliente
+            <p className="text-caption text-mid-gray">
+              Ainda não há entrevista com motorista. Os gráficos abaixo ficam
+              prontos e passam a mostrar os dados assim que as conversas forem
+              registradas.
             </p>
-            <ul className="list-disc space-y-1.5 pl-5 text-sm text-ink-soft marker:text-mid-gray">
-              <li>
-                Como é feito o check-in do veículo hoje: papel, sistema ou não
-                existe?
-              </li>
-              <li>
-                O que vocês já usam de sistema ou plataforma — e o que falta
-                nele?
-              </li>
-              <li>
-                Você usaria um check-in simples com aviso automático ao
-                cliente? O que faria você desistir?
-              </li>
-              <li>
-                Quanto tempo por dia vai embora respondendo cliente que cobra
-                notícia?
-              </li>
-              <li>Quantos clientes por semana cobram notícia do carro?</li>
-              <li>
-                Quanto você pagaria por mês por um aviso automático ao cliente?
-              </li>
-            </ul>
+          </div>
+
+          <PizzaCard
+            titulo="Cliente final: confirma a falta de informação?"
+            subtitulo={`${statsCliente.avaliaramProblema} de ${cliente.length} cliente(s) final(is) responderam`}
+            dados={dadosClienteProblema}
+            vazio="Nenhuma conversa com motorista registrada ainda."
+          />
+
+          <PizzaCard
+            titulo="Cliente final: entende o prazo da oficina?"
+            subtitulo={`${cliente.length} cliente(s) final(is) ouvido(s) até agora`}
+            dados={dadosClientePrazo}
+            vazio="O prazo percebido pelo cliente ainda não foi medido."
+          />
+
+          <PizzaCard
+            titulo="Cliente final: já desistiu ou recusou serviço?"
+            subtitulo={`${cliente.length} cliente(s) final(is) ouvido(s) até agora`}
+            dados={dadosClienteRecusa}
+            vazio="A recusa do lado do cliente ainda não foi medida."
+          />
+
+          <Card className="lg:col-span-2">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-ink">
+                  O que falta validar
+                </h2>
+                <p className="mt-1 text-caption text-mid-gray">
+                  O problema da oficina está firme. A dor e a solução do cliente
+                  final ainda não.
+                </p>
+              </div>
+              <Badge variant="outline">Pendente</Badge>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+                <p className="text-sm font-semibold text-ink">
+                  Oficina · solução
+                </p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-soft marker:text-mid-gray">
+                  <li>Check-in por áudio em menos de 2 minutos.</li>
+                  <li>O que o painel precisa mostrar sem precisar perguntar.</li>
+                  <li>Quanto tempo do dono deixa de ir para o cliente.</li>
+                  <li>Quanto valeria por mês: R$ 49 ou R$ 99.</li>
+                </ul>
+              </div>
+              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+                <p className="text-sm font-semibold text-ink">
+                  Cliente final · problema e solução
+                </p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-soft marker:text-mid-gray">
+                  <li>Como ele fica sabendo do andamento hoje.</li>
+                  <li>Quantas vezes cobra notícia da oficina.</li>
+                  <li>Se usaria o QR code e o que precisaria ver para confiar.</li>
+                  <li>Se o aviso faria escolher a oficina de novo.</li>
+                </ul>
+              </div>
+            </div>
+            <p className="mt-3 text-caption text-mid-gray">
+              As perguntas dos dois lados estão na página{" "}
+              <Link href="/perguntas" className="font-medium text-ink underline">
+                Perguntas
+              </Link>
+              .
+            </p>
           </Card>
+
+          <Card className="lg:col-span-2">
+            <h2 className="mb-1 text-sm font-semibold text-ink">
+              Métricas do beta
+            </h2>
+            <p className="mb-4 text-caption text-mid-gray">
+              O que medir para saber se o check-in por áudio, o painel e o QR
+              code funcionam de verdade, nos dois lados.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {METRICAS_BETA.map((m) => (
+                <div
+                  key={m.metrica}
+                  className="rounded-cards border border-hairline bg-surface-alt p-3"
+                >
+                  <Badge variant="outline">{m.lado}</Badge>
+                  <p className="mt-2 text-sm font-medium text-ink">
+                    {m.metrica}
+                  </p>
+                  <p className="mt-1 text-caption text-mid-gray">{m.como}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <div className="mt-2 lg:col-span-2">
+            <h2 className="text-sm font-semibold text-ink">
+              5. Amostra e qualidade
+            </h2>
+            <p className="text-caption text-mid-gray">
+              Quem foi ouvido, por área e porte, e como as entrevistas se
+              distribuem.
+            </p>
+          </div>
 
           <Card>
             <h2 className="mb-4 text-sm font-semibold text-ink">
@@ -1488,17 +1833,17 @@ export default function GraficosPage() {
               </div>
             </div>
             <h3 className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-              Nossas entrevistas · {stats.realizadas} realizadas
+              Nossas entrevistas · {statsOficina.realizadas} oficinas
             </h3>
             <ul className="mt-2 mb-5 space-y-2 text-sm text-ink-soft">
               <li>
-                <Badge variant="solid">{stats.percIdentificaram}%</Badge> confirmam o
-                problema de prazo/comunicação ({stats.identificaramProblema} de{" "}
-                {stats.avaliaramProblema} que avaliaram)
+                <Badge variant="solid">{statsOficina.percIdentificaram}%</Badge> confirmam o
+                problema de prazo/comunicação ({statsOficina.identificaramProblema} de{" "}
+                {statsOficina.avaliaramProblema} que avaliaram)
               </li>
               <li>
                 <Badge variant="outline">{percRecusas}%</Badge> já perderam serviço
-                por não entender o prazo ({stats.recusas} de {stats.avaliaramProblema})
+                por não entender o prazo ({statsOficina.recusas} de {statsOficina.avaliaramProblema})
               </li>
             </ul>
             <h3 className="text-caption font-semibold uppercase tracking-wide text-mid-gray">

@@ -53,6 +53,52 @@ export default function SolucoesPage() {
         </p>
       </Card>
 
+      <Card className="mt-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">
+              Dois usuários, um produto
+            </h2>
+            <p className="mt-1 text-caption text-mid-gray">
+              Cada lado entra por um motivo diferente — e só um deles paga.
+            </p>
+          </div>
+          <Badge variant="soft">Oficina + cliente final</Badge>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-sm font-semibold text-ink">
+              Usuário 1 · Oficina (dono, recepção, mecânico)
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-soft marker:text-mid-gray">
+              <li>Fala o check-in por áudio e confirma a ordem de serviço.</li>
+              <li>Usa o painel para saber o que está acontecendo sem perguntar.</li>
+              <li>Paga a assinatura mensal: beta R$ 49, alvo R$ 99.</li>
+              <li>Sem setup e sem fidelidade.</li>
+            </ul>
+          </div>
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-sm font-semibold text-ink">
+              Usuário 2 · Cliente final (motorista)
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-soft marker:text-mid-gray">
+              <li>Escaneia o QR code e vê o andamento do carro.</li>
+              <li>Recebe o aviso quando o status muda.</li>
+              <li>Não paga nada, não baixa app e não cria conta.</li>
+              <li>Para de cobrar notícia e confia mais na oficina.</li>
+            </ul>
+          </div>
+        </div>
+        <p className="mt-3 text-caption text-mid-gray">
+          A validação também tem dois lados: a oficina já foi ouvida; o cliente
+          final ainda não. O roteiro dos dois está na página{" "}
+          <Link href="/perguntas" className="font-medium text-ink underline">
+            Perguntas
+          </Link>
+          .
+        </p>
+      </Card>
+
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card>
           <h2 className="text-sm font-semibold text-ink">
