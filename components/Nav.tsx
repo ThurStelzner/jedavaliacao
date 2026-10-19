@@ -2,23 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const LINKS = [
-  { href: "/", label: "Dashboard" },
-  { href: "/entrevistas", label: "Entrevistas" },
-  { href: "/perguntas", label: "Perguntas" },
-  { href: "/respostas", label: "Respostas" },
-  { href: "/analise", label: "Análise" },
-  { href: "/solucoes", label: "Soluções" },
-  { href: "/vendas", label: "Vendas" },
-  { href: "/concorrentes", label: "Concorrentes" },
-  { href: "/pitch", label: "Pitch" },
-  { href: "/mentoria", label: "Mentoria" },
-  { href: "/graficos", label: "Gráficos" },
-  { href: "/tarefas", label: "Tarefas" },
-  { href: "/descobertas", label: "Descobertas" },
-  { href: "/lembretes", label: "Lembretes" },
-];
+import { caminhoNoGrupo, GRUPOS_NAV } from "@/lib/navegacao";
 
 export default function Nav() {
   const pathname = usePathname();
@@ -29,19 +13,19 @@ export default function Nav() {
         <p className="mt-1 text-caption text-mid-gray">Validação de problema</p>
       </div>
       <nav className="flex flex-wrap justify-center gap-1 px-3 py-3 md:flex-col md:flex-nowrap md:justify-start md:py-0">
-        {LINKS.map((l) => {
-          const ativo = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
+        {GRUPOS_NAV.map((g) => {
+          const ativo = caminhoNoGrupo(g, pathname);
           return (
             <Link
-              key={l.href}
-              href={l.href}
+              key={g.href}
+              href={g.href}
               className={`whitespace-nowrap rounded-buttons px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mid-gray ${
                 ativo
                   ? "bg-ink text-[#fafafa]"
                   : "text-ink-soft hover:bg-canvas"
               }`}
             >
-              {l.label}
+              {g.label}
             </Link>
           );
         })}
