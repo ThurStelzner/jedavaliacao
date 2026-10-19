@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { get, put } from "@vercel/blob";
 import type { DB, Descoberta, Entrevista, Lembrete, Prioridade, Tarefa } from "./types";
 
 export const COLLECTIONS = [
@@ -156,12 +157,53 @@ async function blobsWrite(key: string, db: DB): Promise<void> {
   if (!res.ok) throw new Error(`blobs PUT falhou: ${res.status}`);
 }
 
+// Na Vercel o filesystem também é somente leitura. Com um Blob store conectado
+// (BLOB_STORE_ID + OIDC automático), a base fica no Vercel Blob, privada.
+const VERCEL_BLOB_KEY = "db.json";
+
+function vercelBlobEnabled(): boolean {
+  return Boolean(process.env.BLOB_STORE_ID || process.env.BLOB_READ_WRITE_TOKEN);
+}
+
+async function vercelBlobRead(): Promise<DB | null> {
+  try {
+    const result = await get(VERCEL_BLOB_KEY, {
+      access: "private",
+      useCache: false,
+    });
+    if (!result) return null;
+    return normalize(
+      JSON.parse(await new Response(result.stream).text()) as Partial<DB>,
+    );
+  } catch (e) {
+    if (e instanceof Error && /not.?found/i.test(e.message)) return null;
+    throw e;
+  }
+}
+
+async function vercelBlobWrite(db: DB): Promise<void> {
+  await put(VERCEL_BLOB_KEY, JSON.stringify(db), {
+    access: "private",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/json",
+  });
+}
+
 export async function readDB(): Promise<DB> {
   if (blobsCreds()) {
     const db = await blobsRead(BLOB_KEY);
     if (db) return db;
     const seeded = seedDB();
     await blobsWrite(BLOB_KEY, seeded);
+    return seeded;
+  }
+
+  if (vercelBlobEnabled()) {
+    const db = await vercelBlobRead();
+    if (db) return db;
+    const seeded = seedDB();
+    await vercelBlobWrite(seeded);
     return seeded;
   }
 
@@ -178,6 +220,10 @@ export async function readDB(): Promise<DB> {
 export async function writeDB(db: DB): Promise<void> {
   if (blobsCreds()) {
     await blobsWrite(BLOB_KEY, db);
+    return;
+  }
+  if (vercelBlobEnabled()) {
+    await vercelBlobWrite(db);
     return;
   }
   await fs.mkdir(DATA_DIR, { recursive: true });

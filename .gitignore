@@ -5,3 +5,6 @@ data
 .netlify
 *.log
 .DS_Store
+
+.vercel
+.env*
