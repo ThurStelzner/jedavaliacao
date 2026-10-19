@@ -17,7 +17,6 @@ import {
   Button,
   Card,
   EmptyState,
-  Field,
   PageHeader,
   Select,
 } from "@/components/ui";
@@ -96,25 +95,24 @@ export default function RespostasPage() {
         subtitle="O que a oficina já respondeu e o que ainda falta ouvir do cliente final"
         right={
           lado === "oficina" ? (
-            <Field label="">
-              <Select
-                value={responsavel}
-                onChange={(e) => setResponsavel(e.target.value)}
-                className="w-44"
-              >
-                <option value="todos">Todos ({doLado.length})</option>
-                {responsaveis.map((r) => (
-                  <option key={r} value={r}>
-                    {r} (
-                    {
-                      doLado.filter((e) => (e.responsavel || "").trim() === r)
-                        .length
-                    }
-                    )
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            <Select
+              value={responsavel}
+              onChange={(e) => setResponsavel(e.target.value)}
+              className="w-44"
+              aria-label="Filtrar por responsável"
+            >
+              <option value="todos">Todos ({doLado.length})</option>
+              {responsaveis.map((r) => (
+                <option key={r} value={r}>
+                  {r} (
+                  {
+                    doLado.filter((e) => (e.responsavel || "").trim() === r)
+                      .length
+                  }
+                  )
+                </option>
+              ))}
+            </Select>
           ) : undefined
         }
       />
