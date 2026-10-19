@@ -47,6 +47,39 @@ export default function PerguntasPage() {
       />
 
       <Card className="mb-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">
+              Roteiro usado nas 26 entrevistas
+            </h2>
+            <p className="mt-1 text-caption text-mid-gray">
+              As perguntas abaixo são as que foram feitas de verdade para validar o
+              problema. As respostas de cada oficina ficam na página Respostas.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 rounded-cards border border-hairline bg-surface-alt p-3">
+          <p className="text-sm font-semibold text-ink">
+            Perguntas da avaliação (5)
+          </p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-ink-soft marker:text-mid-gray">
+            <li>Modelo de negócio, usuário, decisor e cliente pagante.</li>
+            <li>Como o cliente paga, preço inicial e como chegaram ao valor.</li>
+            <li>Concorrentes e posicionamento.</li>
+            <li>Tamanho do mercado e parcela inicial.</li>
+            <li>Como conquistar os primeiros clientes pagantes.</li>
+          </ol>
+          <p className="mt-2 text-caption text-mid-gray">
+            As respostas completas estão na página{" "}
+            <Link href="/pitch" className="font-medium text-ink underline">
+              Pitch
+            </Link>
+            .
+          </p>
+        </div>
+      </Card>
+
+      <Card className="mb-6">
         <Field label="Nova pergunta">
           <Textarea
             value={texto}

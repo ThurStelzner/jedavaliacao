@@ -31,16 +31,7 @@ const tooltipStyle = {
 };
 
 const CORES_PROBLEMA = ["#0a0a0a", "#e5e5e5", "#d4d4d4"];
-const CORES_PRAZO = ["#7C5AC8", "#a78bfa", "#0a0a0a", "#e5e5e5"];
 const CORES_RECUSA = ["#dc2626", "#0a0a0a", "#a3a3a3", "#e5e5e5"];
-
-const ROTULOS_PRAZO: Record<string, string> = {
-  sim: "Sim, entende",
-  parcial: "Parcialmente",
-  nao: "Não entende",
-  "Não avaliaram o prazo": "Não avaliaram o prazo",
-  "Não informado": "Não informado",
-};
 
 const ROTULOS_RECUSA: Record<string, string> = {
   sim: "Sim, já perdeu serviço",
@@ -81,15 +72,10 @@ export default function AnalisePage() {
       valor: Math.max(stats.avaliaramProblema - stats.identificaramProblema, 0),
     },
     {
-      nome: "Não avaliaram o prazo",
+      nome: "Não avaliaram o problema",
       valor: Math.max(stats.realizadas - stats.avaliaramProblema, 0),
     },
   ];
-
-  const dadosPrazo = stats.porClienteEntendePrazos.map((d) => ({
-    nome: ROTULOS_PRAZO[d.faixa] ?? d.faixa,
-    valor: d.total,
-  }));
 
   const dadosRecusa = stats.porRecusa.map((d) => ({
     nome: ROTULOS_RECUSA[d.faixa] ?? d.faixa,
@@ -111,24 +97,100 @@ export default function AnalisePage() {
     <div>
       <PageHeader
         title="Análise & Validação"
-        subtitle={`Compreensão do prazo de entrega dos serviços em oficinas automotivas · atualiza automaticamente${atualizadoEm ? ` (última: ${atualizadoEm})` : ""}`}
+        subtitle={`Organização do fluxo e comunicação com o cliente em oficinas automotivas · atualiza automaticamente${atualizadoEm ? ` (última: ${atualizadoEm})` : ""}`}
       />
 
       <Card className="mb-6">
         <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-          Problema
+          Qual é o problema?
         </p>
         <p className="mt-1.5 text-body text-ink-soft">
-          Compreensão do prazo de entrega dos serviços em oficinas automotivas. A
-          hipótese é que a <strong className="font-semibold text-ink">falta de
-          atualização ao cliente durante a manutenção</strong> gera insatisfação e
-          perda de clientes por demora sem informação clara.
+          Oficinas mecânicas têm dificuldade para atualizar os clientes sobre o
+          andamento do serviço porque{" "}
+          <strong className="font-semibold text-ink">
+            os mecânicos fazem tudo na oficina
+          </strong>
+          , ficam sem organização para responder e só avisam quando o cliente
+          cobra, o que resulta em respostas demoradas e{" "}
+          <strong className="font-semibold text-ink">
+            cliente perdido sobre a manutenção dos veículos
+          </strong>
+          , tendo que cobrar ou ir à oficina antes de o carro ficar pronto.
         </p>
-        <p className="mt-2 text-caption text-mid-gray">
+        <p className="mt-3 text-caption font-semibold uppercase tracking-wide text-mid-gray">
+          Sintomas relatados nas entrevistas
+        </p>
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-ink-soft marker:text-mid-gray">
+          <li>
+            Mecânico não atualiza nada — só fala quando o cliente manda mensagem
+          </li>
+          <li>
+            Mecânicos fazem tudo na oficina — não sobra tempo para responder no
+            meio do serviço
+          </li>
+          <li>
+            Avisos sem padrão: tem dia que avisa 3 clientes, tem dia que não avisa
+            nenhum
+          </li>
+          <li>
+            Prazo &quot;de cabeça&quot; — nenhum registro estruturado do andamento
+          </li>
+          <li>
+            Orçamento &quot;de cabeça&quot; — valores e aprovações sem registro
+          </li>
+          <li>
+            Defeito adicional: tem que marcar de ir ver para perguntar se pode
+            fazer
+          </li>
+          <li>Check-in no papel</li>
+          <li>
+            Cliente tem que cobrar ou ir à oficina antes de o carro ficar pronto
+          </li>
+        </ul>
+        <p className="mt-3 text-caption text-mid-gray">
           Critérios de validação: {META_ENTREVISTAS} entrevistas realizadas e{" "}
           {META_PERC_PROBLEMA}% das oficinas confirmando o problema (maioria
           qualificada).
         </p>
+      </Card>
+
+      <Card className="mb-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">
+              O que está firme e o que falta confirmar
+            </h2>
+            <p className="mt-1 text-caption text-mid-gray">
+              Para não misturar evidência com estimativa na apresentação
+            </p>
+          </div>
+          <Badge variant="soft">Transparência</Badge>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-caption text-mid-gray">Firme</p>
+            <p className="mt-1 text-xl font-semibold text-ink">64%</p>
+            <p className="mt-1 text-caption text-mid-gray">
+              14 de 22 entrevistas completas confirmam o problema
+            </p>
+          </div>
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-caption text-mid-gray">Firme</p>
+            <p className="mt-1 text-xl font-semibold text-ink">32%</p>
+            <p className="mt-1 text-caption text-mid-gray">
+              7 de 22 já perderam serviço por prazo
+            </p>
+          </div>
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-caption text-mid-gray">A confirmar</p>
+            <p className="mt-1 text-sm font-semibold text-ink">
+              91% · 63% · 11% · 36% · 5 de 5
+            </p>
+            <p className="mt-1 text-caption text-mid-gray">
+              ainda precisam ter a base de cálculo confirmada
+            </p>
+          </div>
+        </div>
       </Card>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
@@ -172,10 +234,11 @@ export default function AnalisePage() {
           )}
         </p>
         <p className="mt-1 text-caption text-mid-gray">
-          {stats.avaliaramProblema} entrevistas avaliaram o problema de prazo; as{" "}
+          Das {stats.realizadas} entrevistas realizadas, {stats.avaliaramProblema}{" "}
+          responderam sobre o problema de prazo; as{" "}
           {Math.max(stats.realizadas - stats.avaliaramProblema, 0)} demais focaram
-          outros temas (ex.: check-in e retrabalho) e aparecem como "Não avaliaram o
-          prazo" nos gráficos, fora do percentual.
+          outros temas (ex.: check-in e retrabalho) e aparecem como "Não avaliaram"
+          nos gráficos. Os percentuais consideram quem avaliou o problema.
         </p>
       </Card>
 
@@ -205,34 +268,6 @@ export default function AnalisePage() {
                     >
                       {dadosProblema.map((d, i) => (
                         <Cell key={d.nome} fill={CORES_PROBLEMA[i]} />
-                      ))}
-                    </Pie>
-                    <Legend
-                      wrapperStyle={{ fontSize: 12, color: "#737373" }}
-                      iconType="circle"
-                    />
-                    <Tooltip contentStyle={tooltipStyle} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-
-            <Card>
-              <h2 className="mb-4 text-sm font-semibold text-ink">
-                O cliente entende os prazos estimados?
-              </h2>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={dadosPrazo}
-                      dataKey="valor"
-                      nameKey="nome"
-                      outerRadius={85}
-                      label={{ fill: "#737373", fontSize: 12 }}
-                    >
-                      {dadosPrazo.map((d, i) => (
-                        <Cell key={d.nome} fill={CORES_PRAZO[i % CORES_PRAZO.length]} />
                       ))}
                     </Pie>
                     <Legend
@@ -326,13 +361,15 @@ export default function AnalisePage() {
               <h3 className="text-sm font-semibold text-ink">O que isso indica</h3>
               <p className="mt-2 text-sm text-ink-soft">
                 {stats.validado
-                  ? `A maioria das oficinas (${stats.percIdentificaram}%) confirma o problema, e ${stats.recusas} já perderam serviço por causa dele — sinal de que o problema é real. Mas não é unânime: parte das oficinas não confirma, seja porque comunica bem (e o cliente entende), seja porque aponta outro problema mais urgente (mão de obra, custo de peças). Dados do setor (J.D. Power) reforçam o padrão: atrasos são comuns e a satisfação do cliente depende de mantê-lo informado. O próximo passo é desenhar a solução de comunicação de status.`
+                  ? `A maioria das oficinas (${stats.percIdentificaram}%) confirma o problema, e ${stats.recusas} já perderam serviço por causa dele — sinal de que o problema é real. Mas não é unânime: parte das oficinas não confirma, seja porque comunica bem (e o cliente entende), seja porque aponta outro problema mais urgente (mão de obra, custo de peças). Dados do setor (J.D. Power) reforçam o padrão: atrasos são comuns e a satisfação do cliente depende de mantê-lo informado. O próximo passo é organizar o check-in e o andamento — a comunicação com o cliente vem como consequência.`
                   : "A amostra ou o percentual de confirmação ainda não atingem os critérios. Continue entrevistando oficinas e registrando as respostas para decidir com segurança se o problema é real."}
               </p>
               <p className="mt-2 text-caption text-mid-gray">
-                Referência de setor: J.D. Power 2023/2025 — o ciclo médio de reparo
-                chegou a 23,1 dias e a satisfação se mantém quando o cliente é
-                informado durante o processo.
+                Referências de setor (pesquisas online 2025/2026): J.D. Power CSI —
+                12% dos reparos falham na 1ª visita (28% por peça indisponível;
+                comunicação está entre os 4 indicadores mais importantes de
+                satisfação); no Brasil, IQA/Ipsos (out/2026): 53% da manutenção é em
+                oficina independente e a confiança pesa mais que o preço (33% × 8%).
               </p>
             </Card>
           </div>
@@ -356,13 +393,13 @@ export default function AnalisePage() {
           Espinha de peixe (causa raiz)
         </h2>
         <p className="mb-4 mt-1.5 text-body text-mid-gray">
-          Análise de causa raiz · oficinas mecânicas — falta de atualização ao cliente
-          durante a manutenção
+          Análise de causa raiz · oficinas mecânicas — falta de organização para
+          atualizar o cliente
         </p>
         <Card>
           <img
             src="/diagramas/oficina.svg"
-            alt="Diagrama de espinha de peixe: causas da falta de atualização ao cliente nas oficinas mecânicas"
+            alt="Diagrama de espinha de peixe: causas da falta de organização para atualizar o cliente nas oficinas mecânicas"
             className="w-full rounded-inputs border border-hairline bg-paper"
           />
           <div className="mt-4 flex flex-wrap gap-2">

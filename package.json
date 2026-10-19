@@ -10,11 +10,14 @@
   },
   "dependencies": {
     "@netlify/blobs": "11.1.4",
-    "@vercel/blob": "^2.8.2",
     "next": "15.5.27",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "recharts": "2.15.0"
+    "react-is": "19.0.0",
+    "recharts": "2.15.4"
+  },
+  "overrides": {
+    "react-is": "19.0.0"
   },
   "devDependencies": {
     "@netlify/plugin-nextjs": "5.16.2",

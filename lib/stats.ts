@@ -2,9 +2,10 @@ import type { Entrevista } from "./types";
 
 export const META_ENTREVISTAS = 20;
 
-// Limiar de validação: maioria qualificada das oficinas confirmando o problema.
-// (Heurística comum em customer discovery; dados do setor — J.D. Power — mostram
-// que atrasos são comuns e a satisfação depende de manter o cliente informado.)
+// Limiar de validação: maioria qualificada das oficinas que avaliaram confirmando
+// o problema. Os percentuais de aprovação/negação consideram as entrevistas que
+// responderam os campos de validação; as demais aparecem como "Não avaliaram".
+// Dados do setor (J.D. Power 2025/2026) reforçam que atrasos são comuns.
 export const META_PERC_PROBLEMA = 60;
 
 export interface Stats {
@@ -67,10 +68,8 @@ export function calcStats(entrevistas: Entrevista[]): Stats {
   const comOutro = realizadas.filter((e) => e.outroProblema.trim().length > 0);
   const recusas = realizadas.filter((e) => e.recusouServico === "sim").length;
 
-  // Entrevistas que de fato avaliaram o problema de prazo (responderam os campos
-  // de validação). Entrevistas com outro foco (ex.: check-in/retrabalho) ficam
-  // registradas no site e aparecem como "Não avaliaram o prazo" nos gráficos,
-  // mas fora do cálculo do percentual.
+  // Entrevistas que responderam os campos de validação (base dos percentuais de
+  // aprovação/negação). As demais ficam registradas e aparecem como "Não avaliaram".
   const avaliaram = realizadas.filter(avaliouProblema);
 
   const indicacoes = realizadas.reduce(
@@ -95,6 +94,8 @@ export function calcStats(entrevistas: Entrevista[]): Stats {
     responsavelCount.set(r, (responsavelCount.get(r) ?? 0) + 1);
   }
 
+  // Percentuais de aprovação/negação: base = entrevistas que avaliaram o problema
+  // ("Não avaliaram" aparece à parte nos gráficos).
   const totalAvaliaram = avaliaram.length || 1;
   const percIdentificaram = avaliaram.length
     ? Math.round((identificaram.length / totalAvaliaram) * 100)

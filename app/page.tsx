@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Bar,
   BarChart,
@@ -83,7 +84,7 @@ export default function DashboardPage() {
       valor: Math.max(stats.avaliaramProblema - stats.identificaramProblema, 0),
     },
     {
-      nome: "Não avaliaram o prazo",
+      nome: "Não avaliaram o problema",
       valor: Math.max(stats.realizadas - stats.avaliaramProblema, 0),
     },
   ];
@@ -99,12 +100,43 @@ export default function DashboardPage() {
         subtitle={`Visão geral da validação do problema · atualiza automaticamente${atualizadoEm ? ` (última: ${atualizadoEm})` : ""}`}
       />
 
+      <Card className="mb-6">
+        <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
+          Qual é o problema?
+        </p>
+        <p className="mt-1.5 text-body text-ink-soft">
+          Oficinas mecânicas têm dificuldade para atualizar os clientes sobre o
+          andamento do serviço porque os mecânicos fazem tudo na oficina, ficam
+          sem organização para responder e só avisam quando o cliente cobra, o que
+          resulta em respostas demoradas e cliente perdido sobre a manutenção dos
+          veículos, tendo que cobrar ou ir à oficina antes de o carro ficar
+          pronto.
+        </p>
+        <p className="mt-2 text-caption text-mid-gray">
+          {stats.percIdentificaram}% ({stats.identificaramProblema} de{" "}
+          {stats.avaliaramProblema}) confirmam o problema · {stats.recusas} já
+          perderam serviço por prazo · detalhes na página{" "}
+          <Link href="/analise" className="underline underline-offset-2">
+            Análise
+          </Link>
+          .
+        </p>
+        <p className="mt-1 text-caption text-mid-gray">
+          A solução proposta está na página{" "}
+          <Link href="/solucoes" className="underline underline-offset-2">
+            Solução
+          </Link>
+          . Os números de 91%, 63%, 11% e 36%, e o &quot;5 de 5&quot;, ainda
+          precisam ter a base confirmada.
+        </p>
+      </Card>
+
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <Stat
           label="Entrevistas realizadas"
           value={`${stats.realizadas}/${stats.total}`}
         />
-        <Stat label="Oficinas entrevistadas" value={String(stats.empresasEntrevistadas)} />
+        <Stat label="Oficinas entrevistadas" value={String(stats.realizadas)} />
         <Stat
           label="Serviços recusados por prazo"
           value={String(stats.recusas)}

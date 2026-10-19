@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { apiList } from "@/lib/api";
 import type { Entrevista, Pergunta } from "@/lib/types";
 import {
@@ -80,6 +81,37 @@ export default function RespostasPage() {
           </Field>
         }
       />
+
+      <Card className="mb-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">
+              Como ler estas respostas
+            </h2>
+            <p className="mt-1 text-caption text-mid-gray">
+              O que está firme no levantamento e o que ainda precisa de base
+            </p>
+          </div>
+          <Badge variant="soft">Transparência</Badge>
+        </div>
+        <p className="mt-3 text-sm text-ink-soft">
+          <strong className="font-semibold text-ink">64%</strong> confirmam o
+          problema (14 de 22 entrevistas completas) e{" "}
+          <strong className="font-semibold text-ink">32%</strong> já perderam serviço
+          por prazo (7 de 22).
+        </p>
+        <p className="mt-2 text-sm text-ink-soft">
+          Os números de 91%, 63%, 11% e 36%, e o &quot;5 de 5 usariam uma solução
+          online&quot;, ainda precisam ter a base de cálculo confirmada.
+        </p>
+        <p className="mt-2 text-caption text-mid-gray">
+          As 5 respostas da avaliação estão na página{" "}
+          <Link href="/pitch" className="font-medium text-ink underline">
+            Pitch
+          </Link>
+          . Abaixo estão as respostas de cada entrevista.
+        </p>
+      </Card>
 
       {visiveis.length === 0 ? (
         <EmptyState>Nenhuma entrevista para exibir.</EmptyState>
