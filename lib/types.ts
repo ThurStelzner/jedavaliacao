@@ -47,6 +47,7 @@ export interface Entrevista {
   outroProblema: string;
   clienteEntendePrazos?: ClienteEntendePrazos;
   recusouServico?: RecusouServico;
+  exemplo?: boolean;
   createdAt: string;
 }
 

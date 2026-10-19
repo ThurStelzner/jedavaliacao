@@ -93,7 +93,7 @@ export default function MentoriaPage() {
             </li>
             <li>
               <span className="font-medium text-ink">Validação incompleta:</span>{" "}
-              falta ouvir os clientes finais — é uma pendência real.
+              falta ouvir os clientes finais de verdade — é uma pendência real.
             </li>
             <li>
               <span className="font-medium text-ink">Organização como causa:</span>{" "}

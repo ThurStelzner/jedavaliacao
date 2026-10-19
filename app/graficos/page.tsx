@@ -16,10 +16,10 @@ import {
 } from "recharts";
 import { apiList } from "@/lib/api";
 import { calcStats, META_ENTREVISTAS, META_PERC_PROBLEMA } from "@/lib/stats";
-import type { Entrevista, Pergunta } from "@/lib/types";
+import type { Entrevista, Pergunta, Rodada } from "@/lib/types";
 import {
+  ehExemplo,
   META_CLIENTE,
-  METRICAS_BETA,
   publicoDaPergunta,
   publicoDe,
   rodadaDaPergunta,
@@ -36,6 +36,7 @@ const tooltipStyle = {
   fontSize: 12,
   color: "#0a0a0a",
 };
+const CORES = ["#0a0a0a", "#15803d", "#7C5AC8", "#dc2626", "#a3a3a3", "#a78bfa"];
 
 type RotuloProps = {
   percent?: number;
@@ -58,41 +59,41 @@ const rotuloPercentual = (p: RotuloProps) => (
   </text>
 );
 
+type Fatia = { nome: string; valor: number; cor: string };
+type Barra = { rotulo: string; valor: number; base: number; cor: string };
+
 function PizzaCard({
   titulo,
   subtitulo,
   dados,
   vazio,
+  altura = "h-64",
 }: {
   titulo: string;
   subtitulo: string;
-  dados: Array<{ nome: string; valor: number; cor: string }>;
+  dados: Fatia[];
   vazio: string;
+  altura?: string;
 }) {
   return (
     <Card>
-      <h2 className="mb-1 text-sm font-semibold text-ink">{titulo}</h2>
-      <p className="mb-3 text-caption text-mid-gray">{subtitulo}</p>
+      <h3 className="text-sm font-semibold text-ink">{titulo}</h3>
+      <p className="mb-3 mt-1 text-caption text-mid-gray">{subtitulo}</p>
       {dados.length === 0 ? (
-        <div className="flex h-64 flex-col items-center justify-center rounded-cards border border-dashed border-hairline bg-surface-alt p-4 text-center">
-          <p className="text-sm font-medium text-ink">Aguardando entrevistas</p>
-          <p className="mt-1 text-caption text-mid-gray">{vazio}</p>
-          <Link
-            href="/entrevistas"
-            className="mt-3 text-caption font-medium text-ink underline underline-offset-2"
-          >
-            Registrar entrevista com cliente
-          </Link>
+        <div
+          className={`flex ${altura} flex-col items-center justify-center rounded-cards border border-dashed border-hairline bg-surface-alt p-4 text-center`}
+        >
+          <p className="text-caption text-mid-gray">{vazio}</p>
         </div>
       ) : (
-        <div className="h-64">
+        <div className={altura}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={dados}
                 dataKey="valor"
                 nameKey="nome"
-                outerRadius={85}
+                outerRadius={82}
                 label={rotuloPercentual}
               >
                 {dados.map((d) => (
@@ -112,75 +113,97 @@ function PizzaCard({
   );
 }
 
-const MERCADO = [
-  {
-    dado: "12%",
-    texto: "dos reparos não são concluídos corretamente na 1ª visita",
-    fonte: "J.D. Power CSI 2025 · EUA",
-  },
-  {
-    dado: "28%",
-    texto: "dos reparos com falha envolvem peça indisponível",
-    fonte: "J.D. Power CSI 2025 · EUA",
-  },
-  {
-    dado: "4 em 10",
-    texto: "indicadores mais importantes da satisfação são de comunicação",
-    fonte: "J.D. Power CSI 2025 · EUA",
-  },
-  {
-    dado: "62%",
-    texto: "das visitas em oficinas independentes duram menos de 1 hora",
-    fonte: "J.D. Power CSI 2026 · EUA",
-  },
-  {
-    dado: "53%",
-    texto: "da manutenção no Brasil já é feita em oficinas independentes",
-    fonte: "IQA/Ipsos · out/2026",
-  },
-  {
-    dado: "33% × 8%",
-    texto: "escolhem a oficina pela confiança no profissional, não pelo preço",
-    fonte: "IQA/Ipsos · out/2026",
-  },
-  {
-    dado: "56%",
-    texto: "dos clientes preferem ser avisados por mensagem, não por ligação",
-    fonte: "J.D. Power ASI · abr/2025 · EUA",
-  },
-  {
-    dado: "2×",
-    texto: "foto/vídeo do serviço mais que dobram a aprovação do trabalho recomendado",
-    fonte: "J.D. Power ASI · abr/2026 · EUA",
-  },
-  {
-    dado: "43%",
-    texto: "das oficinas independentes já usam inspeção digital (47% têm agendamento online)",
-    fonte: "Endeavor/AutoZone · dez/2025 · EUA",
-  },
-  {
-    dado: "64% × 26%",
-    texto: "dos clientes querem foto/vídeo da inspeção — só 26% dos populares recebem",
-    fonte: "J.D. Power CSI · mar/2026 · EUA",
-  },
-];
-
-function avaliouProblema(e: Entrevista): boolean {
+function BarList({
+  titulo,
+  subtitulo,
+  itens,
+}: {
+  titulo: string;
+  subtitulo?: string;
+  itens: Barra[];
+}) {
   return (
-    e.identificouProblema ||
-    Boolean(e.clienteEntendePrazos) ||
-    Boolean(e.recusouServico)
+    <Card>
+      <h3 className="text-sm font-semibold text-ink">{titulo}</h3>
+      {subtitulo && (
+        <p className="mb-4 mt-1 text-caption text-mid-gray">{subtitulo}</p>
+      )}
+      <div className="space-y-3.5">
+        {itens.map((l) => {
+          const perc = l.base ? Math.round((l.valor / l.base) * 100) : 0;
+          return (
+            <div key={l.rotulo}>
+              <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
+                <span className="text-ink-soft">{l.rotulo}</span>
+                <span className="whitespace-nowrap font-semibold text-ink">
+                  {l.valor}
+                  <span className="font-normal text-mid-gray"> de {l.base}</span>{" "}
+                  <span className="text-caption font-normal text-mid-gray">
+                    ({perc}%)
+                  </span>
+                </span>
+              </div>
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-canvas">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${perc}%`, background: l.cor }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
   );
 }
 
-// ===== Leitura das respostas livres (além da validação do problema) =====
-// Regras de classificação calibradas com as 26 entrevistas registradas.
-// Bases honestas: cada gráfico informa de quantas entrevistas os percentuais saem.
+function MiniStat({
+  rotulo,
+  valor,
+  detalhe,
+}: {
+  rotulo: string;
+  valor: string;
+  detalhe: string;
+}) {
+  return (
+    <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+      <p className="text-caption text-mid-gray">{rotulo}</p>
+      <p className="mt-1 text-xl font-semibold text-ink">{valor}</p>
+      <p className="mt-1 text-caption text-mid-gray">{detalhe}</p>
+    </div>
+  );
+}
 
-type CanalAviso = "whatsapp" | "telefone" | "presencial" | "ninguem";
-type PadraoAviso = "semPadrao" | "fotoVideo" | "manual" | "presencial" | "naoAvisa";
+function Titulo({ children, nota }: { children: React.ReactNode; nota?: string }) {
+  return (
+    <div className="mt-2 lg:col-span-2">
+      <h2 className="text-sm font-semibold text-ink">{children}</h2>
+      {nota && <p className="text-caption text-mid-gray">{nota}</p>}
+    </div>
+  );
+}
 
-const PADRAO_SEM_REGRA = [
+function aval(i: Entrevista): boolean {
+  return (
+    i.identificouProblema ||
+    Boolean(i.clienteEntendePrazos) ||
+    Boolean(i.recusouServico)
+  );
+}
+
+function resposta(e: Entrevista, id?: string): string {
+  if (!id) return "";
+  return (e.respostas.find((r) => r.perguntaId === id)?.resposta ?? "").trim();
+}
+
+function textoCompleto(e: Entrevista): string {
+  return `${e.anotacoes ?? ""} ${(e.respostas ?? [])
+    .map((r) => r.resposta)
+    .join(" ")}`.toLowerCase();
+}
+
+const SEM_REGRA = [
   "quando lembra",
   "sem padrão",
   "quando dá",
@@ -195,11 +218,9 @@ const PADRAO_SEM_REGRA = [
   "ninguém é avisado",
   "não consegue atualizar",
   "sem notícia",
-  "no telefone e na graxa",
   "tudo manual",
   "quando esquecem",
 ];
-
 const QUER_ADOTAR = [
   "queria um sistema",
   "pretende adotar",
@@ -208,59 +229,38 @@ const QUER_ADOTAR = [
   "simples e fácil de adotar",
   "solução acessível",
 ];
+const BARREIRA = ["caros ou complicados", "considerados caros", "custo", "pagar por mais de um"];
 
-const BARREIRA_ADOCAO = [
-  "caros ou complicados",
-  "considerados caros",
-  "caras e incompletas",
-  "custo",
-  "pagar por mais de um",
-];
-
-function textoResposta(e: Entrevista, perguntaId?: string): string {
-  if (!perguntaId) return "";
-  return (e.respostas.find((r) => r.perguntaId === perguntaId)?.resposta ?? "").trim();
-}
-
-function textoEntrevista(e: Entrevista): string {
-  return `${e.anotacoes ?? ""} ${(e.respostas ?? [])
-    .map((r) => r.resposta)
-    .join(" ")}`.toLowerCase();
-}
-
-function classificarCanal(t: string): CanalAviso | null {
+function classificarCanal(t: string): "whatsapp" | "telefone" | "presencial" | "ninguem" | null {
   const s = t.toLowerCase();
   if (!s || s.startsWith("não abordado")) return null;
   if (s.includes("whatsapp")) return "whatsapp";
-  if (s.includes("liga") || s.includes("telefone") || s.includes("celular"))
-    return "telefone";
+  if (s.includes("liga") || s.includes("telefone") || s.includes("celular")) return "telefone";
   if (s.includes("presencial")) return "presencial";
   if (s.includes("não avisa") || s.includes("morre entre")) return "ninguem";
   return null;
 }
 
-function classificarPadrao(t: string): PadraoAviso | null {
+function classificarPadrao(t: string): "semPadrao" | "fotoVideo" | "manual" | "presencial" | "naoAvisa" | null {
   const s = t.toLowerCase();
   if (!s || s.startsWith("não abordado")) return null;
   if (s.startsWith("não avisa")) return "naoAvisa";
   if (s.includes("presencial")) return "presencial";
-  if (PADRAO_SEM_REGRA.some((k) => s.includes(k))) return "semPadrao";
+  if (SEM_REGRA.some((k) => s.includes(k))) return "semPadrao";
   if (s.includes("foto") || s.includes("vídeo")) return "fotoVideo";
   if (s.includes("não apoiam") || s.includes("benefício esperado")) return null;
   return "manual";
 }
 
-function classificarPrazoEscrito(t: string): "escrito" | "falado" | null {
+function classificarPrazo(t: string): "escrito" | "falado" | null {
   const s = t.toLowerCase();
-  if (!s || s.startsWith("não abordado") || s.startsWith("não detalhado"))
-    return null;
-  if (s.includes("ordem de serviço") || s.includes("no orçamento"))
-    return "escrito";
+  if (!s || s.startsWith("não abordado") || s.startsWith("não detalhado")) return null;
+  if (s.includes("ordem de serviço") || s.includes("no orçamento")) return "escrito";
   return "falado";
 }
 
 function classificarCheckin(e: Entrevista): "papel" | "naoFaz" | "digital" | null {
-  const t = textoEntrevista(e);
+  const t = textoCompleto(e);
   if (!t.includes("check-in") && !t.includes("checkin")) return null;
   if (t.includes("não faz check-in") || t.includes("não aderiu")) return "naoFaz";
   if (t.includes("papel")) return "papel";
@@ -268,30 +268,65 @@ function classificarCheckin(e: Entrevista): "papel" | "naoFaz" | "digital" | nul
   return null;
 }
 
-function usaSistema(e: Entrevista): boolean {
-  const t = textoEntrevista(e);
-  return (
-    t.includes("utiliza vários sistemas") ||
-    t.includes("plataformas pagas") ||
-    t.includes("painel da loja")
-  );
+const CONFIANCA: Array<{ nome: string; chaves: string[] }> = [
+  { nome: "Fotos do serviço", chaves: ["foto", "vídeo"] },
+  {
+    nome: "Prazo e data de entrega",
+    chaves: ["prazo", "data de entrega", "previsão", "quando fica"],
+  },
+  { nome: "Valor e orçamento", chaves: ["orçamento", "valor", "custo", "preço"] },
+  {
+    nome: "Status e etapas do serviço",
+    chaves: ["status", "etapa", "diagnóstico", "o que está sendo feito", "andamento"],
+  },
+  { nome: "Contato de quem mexe", chaves: ["contato", "quem está", "falar com o mecânico"] },
+];
+
+const DESISTIR: Array<{ nome: string; chaves: string[] }> = [
+  { nome: "Se a oficina não atualizar", chaves: ["não atualiz", "nada atualizado", "não tivesse nada"] },
+  {
+    nome: "Se for complicado (app, conta, cadastro)",
+    chaves: ["complicado", "burocrático", "aplicativo", "app", "conta", "cadastro", "difícil", "não abrisse", "abrir"],
+  },
+  { nome: "Se tiver propaganda demais", chaves: ["propaganda"] },
+  { nome: "Se avisar só no fim", chaves: ["só quando o carro"] },
+];
+
+function classificarPagar(t: string): "nao" | "talvez" | "sim" | null {
+  const s = t.toLowerCase();
+  if (!s || s.startsWith("não abordado")) return null;
+  if (s.startsWith("não") || s.includes("não pagaria")) return "nao";
+  if (s.includes("talvez") || s.includes("se fosse barato")) return "talvez";
+  if (s.includes("pagaria") || s.includes("pago")) return "sim";
+  return null;
 }
 
-function querAdotar(e: Entrevista): boolean {
-  const t = textoEntrevista(e);
-  return QUER_ADOTAR.some((k) => t.includes(k));
-}
+const MERCADO = [
+  { dado: "12%", texto: "dos reparos não são concluídos corretamente na 1ª visita", fonte: "J.D. Power CSI 2025 · EUA" },
+  { dado: "28%", texto: "dos reparos com falha envolvem peça indisponível", fonte: "J.D. Power CSI 2025 · EUA" },
+  { dado: "4 em 10", texto: "indicadores mais importantes da satisfação são de comunicação", fonte: "J.D. Power CSI 2025 · EUA" },
+  { dado: "56%", texto: "dos clientes preferem ser avisados por mensagem, não por ligação", fonte: "J.D. Power ASI · abr/2025 · EUA" },
+  { dado: "2×", texto: "foto/vídeo do serviço mais que dobram a aprovação do trabalho recomendado", fonte: "J.D. Power ASI · abr/2026 · EUA" },
+  { dado: "64% × 26%", texto: "dos clientes querem foto/vídeo da inspeção — só 26% dos populares recebem", fonte: "J.D. Power CSI · mar/2026 · EUA" },
+  { dado: "53%", texto: "da manutenção no Brasil já é feita em oficinas independentes", fonte: "IQA/Ipsos · out/2026" },
+  { dado: "33% × 8%", texto: "escolhem a oficina pela confiança no profissional, não pelo preço", fonte: "IQA/Ipsos · out/2026" },
+  { dado: "43%", texto: "das oficinas independentes já usam inspeção digital", fonte: "Endeavor/AutoZone · dez/2025 · EUA" },
+];
 
-function citaBarreiraAdocao(e: Entrevista): boolean {
-  const t = textoEntrevista(e);
-  return BARREIRA_ADOCAO.some((k) => t.includes(k));
-}
+const ABAS = [
+  { id: "oficina", nome: "Oficina" },
+  { id: "cliente", nome: "Cliente final" },
+  { id: "amostra", nome: "Amostra e qualidade" },
+] as const;
+
+type Aba = (typeof ABAS)[number]["id"];
 
 export default function GraficosPage() {
   const [entrevistas, setEntrevistas] = useState<Entrevista[]>([]);
   const [perguntas, setPerguntas] = useState<Pergunta[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [atualizadoEm, setAtualizadoEm] = useState("");
+  const [aba, setAba] = useState<Aba>("oficina");
 
   useEffect(() => {
     let ativo = true;
@@ -314,101 +349,35 @@ export default function GraficosPage() {
     };
   }, []);
 
-  const oficina = useMemo(
-    () => entrevistas.filter((e) => publicoDe(e) === "oficina"),
-    [entrevistas],
-  );
-  const cliente = useMemo(
-    () => entrevistas.filter((e) => publicoDe(e) === "cliente"),
-    [entrevistas],
-  );
+  const oficina = useMemo(() => entrevistas.filter((e) => publicoDe(e) === "oficina"), [entrevistas]);
+  const cliente = useMemo(() => entrevistas.filter((e) => publicoDe(e) === "cliente"), [entrevistas]);
   const statsOficina = useMemo(() => calcStats(oficina), [oficina]);
   const statsCliente = useMemo(() => calcStats(cliente), [cliente]);
+  const temDemo = useMemo(() => cliente.some(ehExemplo), [cliente]);
+
   const perguntasBase = useMemo(
     () =>
       perguntas
-        .filter(
-          (p) =>
-            publicoDaPergunta(p) === "oficina" &&
-            rodadaDaPergunta(p) === "problema",
-        )
-        .sort(
-          (a, b) =>
-            (a.ordem ?? 0) - (b.ordem ?? 0) ||
-            a.createdAt.localeCompare(b.createdAt),
-        ),
+        .filter((p) => publicoDaPergunta(p) === "oficina" && rodadaDaPergunta(p) === "problema")
+        .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || a.createdAt.localeCompare(b.createdAt)),
     [perguntas],
   );
-
-  // Cobertura dos dois lados: quantas entrevistas cada público já tem.
-  const cobertura = useMemo(
-    () => [
-      { nome: "Oficina", total: oficina.length, meta: META_ENTREVISTAS },
-      { nome: "Cliente final", total: cliente.length, meta: META_CLIENTE },
-    ],
-    [oficina.length, cliente.length],
-  );
-
-  // Cliente final: dados diretos (quando existirem entrevistas com motoristas).
-  const dadosClienteProblema = useMemo(
+  const perguntasCliente = useMemo(
     () =>
-      [
-        {
-          nome: "Confirmam a falta de informação",
-          valor: statsCliente.identificaramProblema,
-          cor: "#15803d",
-        },
-        {
-          nome: "Não confirmam",
-          valor: Math.max(
-            statsCliente.avaliaramProblema - statsCliente.identificaramProblema,
-            0,
-          ),
-          cor: "#0a0a0a",
-        },
-      ].filter((d) => d.valor > 0),
-    [statsCliente],
+      perguntas
+        .filter((p) => publicoDaPergunta(p) === "cliente")
+        .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0)),
+    [perguntas],
   );
+  const pid = (publico: "oficina" | "cliente", rodada: Rodada, ordem: number) =>
+    (publico === "cliente" ? perguntasCliente : perguntasBase).find(
+      (p) => rodadaDaPergunta(p) === rodada && (p.ordem ?? 0) === ordem,
+    )?.id;
 
-  const dadosClientePrazo = useMemo(() => {
-    const valor = (faixa: string) =>
-      statsCliente.porClienteEntendePrazos.find((f) => f.faixa === faixa)
-        ?.total ?? 0;
-    return [
-      { nome: "Entendem o prazo", valor: valor("sim"), cor: "#15803d" },
-      { nome: "Entendem em parte", valor: valor("parcial"), cor: "#a3a3a3" },
-      { nome: "Não entendem", valor: valor("nao"), cor: "#dc2626" },
-      {
-        nome: "Sem resposta",
-        valor: valor("Não informado") + valor("Não avaliaram o prazo"),
-        cor: "#e5e5e5",
-      },
-    ].filter((d) => d.valor > 0);
-  }, [statsCliente]);
-
-  const dadosClienteRecusa = useMemo(() => {
-    const valor = (faixa: string) =>
-      statsCliente.porRecusa.find((f) => f.faixa === faixa)?.total ?? 0;
-    return [
-      { nome: "Já desistiram/recusaram", valor: valor("sim"), cor: "#dc2626" },
-      { nome: "Não recusaram", valor: valor("nao"), cor: "#0a0a0a" },
-      { nome: "Incerto", valor: valor("incerto"), cor: "#a3a3a3" },
-      {
-        nome: "Sem resposta",
-        valor: valor("Não informado") + valor("Não avaliaram o prazo"),
-        cor: "#e5e5e5",
-      },
-    ].filter((d) => d.valor > 0);
-  }, [statsCliente]);
-
-  // 1) Aprovação × negação do problema (base: quem avaliou o problema)
-  const dadosProblema = useMemo(
+  // ---------- Oficina ----------
+  const oficinaProblema = useMemo<Fatia[]>(
     () => [
-      {
-        nome: "Confirmam o problema",
-        valor: statsOficina.identificaramProblema,
-        cor: "#15803d",
-      },
+      { nome: "Confirmam o problema", valor: statsOficina.identificaramProblema, cor: "#15803d" },
       {
         nome: "Não confirmam",
         valor: Math.max(statsOficina.avaliaramProblema - statsOficina.identificaramProblema, 0),
@@ -418,8 +387,7 @@ export default function GraficosPage() {
     [statsOficina],
   );
 
-  // 2) Recusa de serviço por prazo (base: quem avaliou o problema)
-  const dadosRecusaGeral = useMemo(
+  const oficinaRecusa = useMemo<Fatia[]>(
     () =>
       [
         { faixa: "sim", nome: "Já recusou", cor: "#dc2626" },
@@ -435,92 +403,12 @@ export default function GraficosPage() {
     [statsOficina],
   );
 
-  // 4) Respostas por pergunta (respondidas × não abordadas × sem resposta)
-  const respostaPorPergunta = useMemo(
-    () =>
-      perguntasBase.map((p, i) => {
-        let respondidas = 0;
-        let naoAbordadas = 0;
-        let semResposta = 0;
-        for (const e of oficina) {
-          const r = e.respostas.find((x) => x.perguntaId === p.id)?.resposta ?? "";
-          const t = r.trim();
-          if (!t) semResposta += 1;
-          else if (t.startsWith("Não abordado")) naoAbordadas += 1;
-          else respondidas += 1;
-        }
-        return {
-          nome: `P${i + 1}`,
-          respondidas,
-          naoAbordadas,
-          semResposta,
-          texto: p.texto,
-        };
-      }),
-    [perguntasBase, oficina],
-  );
-
-  // 5) Confirmam por porte (empilhado)
-  const problemaPorPorte = useMemo(() => {
-    const map = new Map<
-      string,
-      { sim: number; nao: number; naoAvaliaram: number }
-    >();
-    for (const e of oficina) {
-      const p = e.porte || "Não informado";
-      const atual = map.get(p) ?? { sim: 0, nao: 0, naoAvaliaram: 0 };
-      if (!avaliouProblema(e)) atual.naoAvaliaram += 1;
-      else if (e.identificouProblema) atual.sim += 1;
-      else atual.nao += 1;
-      map.set(p, atual);
-    }
-    return Array.from(map.entries()).map(([nome, v]) => ({ nome, ...v }));
-  }, [oficina]);
-
-  // 6) Funil de validação (confirmação e recusa: % sobre quem avaliou o problema)
-  const funil = useMemo(() => {
-    const base = statsOficina.realizadas || 1;
-    const baseAval = statsOficina.avaliaramProblema || 1;
-    return [
-      {
-        rotulo: "Entrevistas realizadas",
-        valor: statsOficina.realizadas,
-        cor: "#0a0a0a",
-        perc: 100,
-      },
-      {
-        rotulo: "Avaliaram o problema de prazo",
-        valor: statsOficina.avaliaramProblema,
-        cor: "#7C5AC8",
-        perc: Math.round((statsOficina.avaliaramProblema / base) * 100),
-      },
-      {
-        rotulo: "Confirmam o problema",
-        valor: statsOficina.identificaramProblema,
-        cor: "#15803d",
-        perc: Math.round((statsOficina.identificaramProblema / baseAval) * 100),
-      },
-      {
-        rotulo: "Já perderam serviço por prazo",
-        valor: statsOficina.recusas,
-        cor: "#dc2626",
-        perc: Math.round((statsOficina.recusas / baseAval) * 100),
-      },
-    ];
-  }, [statsOficina]);
-
-  // 7) Canal do aviso ao cliente (pergunta 4 do roteiro)
-  const canalAviso = useMemo(() => {
-    const id = perguntasBase[3]?.id;
-    const cont: Record<CanalAviso, number> = {
-      whatsapp: 0,
-      telefone: 0,
-      presencial: 0,
-      ninguem: 0,
-    };
+  const canal = useMemo(() => {
+    const id = pid("oficina", "problema", 4);
+    const cont = { whatsapp: 0, telefone: 0, presencial: 0, ninguem: 0 };
     let base = 0;
     for (const e of oficina) {
-      const c = classificarCanal(textoResposta(e, id));
+      const c = classificarCanal(resposta(e, id));
       if (c) {
         cont[c] += 1;
         base += 1;
@@ -528,32 +416,21 @@ export default function GraficosPage() {
     }
     return {
       base,
-      dados: [
-        { nome: "WhatsApp", valor: cont.whatsapp, cor: "#15803d" },
-        { nome: "Telefone / ligação", valor: cont.telefone, cor: "#7C5AC8" },
-        {
-          nome: "Cliente acompanha na oficina",
-          valor: cont.presencial,
-          cor: "#a3a3a3",
-        },
-        { nome: "Ninguém avisa", valor: cont.ninguem, cor: "#dc2626" },
+      itens: [
+        { rotulo: "WhatsApp", valor: cont.whatsapp, base, cor: "#15803d" },
+        { rotulo: "Telefone / ligação", valor: cont.telefone, base, cor: "#7C5AC8" },
+        { rotulo: "Cliente acompanha na oficina", valor: cont.presencial, base, cor: "#a3a3a3" },
+        { rotulo: "Ninguém avisa", valor: cont.ninguem, base, cor: "#dc2626" },
       ].filter((d) => d.valor > 0),
     };
-  }, [oficina, perguntasBase]);
+  }, [oficina, perguntasCliente, perguntasBase]);
 
-  // 8) Padrão do aviso (pergunta 4 do roteiro)
-  const padraoAviso = useMemo(() => {
-    const id = perguntasBase[3]?.id;
-    const cont: Record<PadraoAviso, number> = {
-      semPadrao: 0,
-      fotoVideo: 0,
-      manual: 0,
-      presencial: 0,
-      naoAvisa: 0,
-    };
+  const padrao = useMemo(() => {
+    const id = pid("oficina", "problema", 4);
+    const cont = { semPadrao: 0, fotoVideo: 0, manual: 0, presencial: 0, naoAvisa: 0 };
     let base = 0;
     for (const e of oficina) {
-      const c = classificarPadrao(textoResposta(e, id));
+      const c = classificarPadrao(resposta(e, id));
       if (c) {
         cont[c] += 1;
         base += 1;
@@ -561,51 +438,37 @@ export default function GraficosPage() {
     }
     return {
       base,
-      dados: [
-        {
-          nome: "Sem padrão (quando lembram)",
-          valor: cont.semPadrao,
-          cor: "#dc2626",
-        },
-        {
-          nome: "Rotina com foto/vídeo",
-          valor: cont.fotoVideo,
-          cor: "#15803d",
-        },
-        { nome: "Manual simples", valor: cont.manual, cor: "#a78bfa" },
-        { nome: "Cliente acompanha", valor: cont.presencial, cor: "#a3a3a3" },
-        { nome: "Não avisa", valor: cont.naoAvisa, cor: "#0a0a0a" },
+      itens: [
+        { rotulo: "Sem padrão (quando lembram)", valor: cont.semPadrao, base, cor: "#dc2626" },
+        { rotulo: "Rotina com foto/vídeo", valor: cont.fotoVideo, base, cor: "#15803d" },
+        { rotulo: "Manual simples", valor: cont.manual, base, cor: "#a78bfa" },
+        { rotulo: "Cliente acompanha na oficina", valor: cont.presencial, base, cor: "#a3a3a3" },
+        { rotulo: "Não avisa", valor: cont.naoAvisa, base, cor: "#0a0a0a" },
       ].filter((d) => d.valor > 0),
     };
   }, [oficina, perguntasBase]);
 
-  // 9) Prazo por escrito (pergunta 3 do roteiro)
-  const prazoEscrito = useMemo(() => {
-    const id = perguntasBase[2]?.id;
+  const prazo = useMemo(() => {
+    const id = pid("oficina", "problema", 3);
     let escrito = 0;
     let falado = 0;
     for (const e of oficina) {
-      const c = classificarPrazoEscrito(textoResposta(e, id));
+      const c = classificarPrazo(resposta(e, id));
       if (c === "escrito") escrito += 1;
       else if (c === "falado") falado += 1;
     }
+    const base = escrito + falado;
     return {
-      base: escrito + falado,
-      dados: [
-        { nome: "Só falado, sem registro", valor: falado, cor: "#0a0a0a" },
-        {
-          nome: "Por escrito (orçamento/OS)",
-          valor: escrito,
-          cor: "#15803d",
-        },
-      ].filter((d) => d.valor > 0),
+      itens: [
+        { rotulo: "Só falado, sem registro", valor: falado, base, cor: "#0a0a0a" },
+        { rotulo: "Por escrito (orçamento/OS)", valor: escrito, base, cor: "#15803d" },
+      ].filter((d) => d.valor > 0 || base === 0),
     };
   }, [oficina, perguntasBase]);
 
-  // 10) Check-in, sistemas e adoção (anotações + respostas)
-  const checkinSistema = useMemo(() => {
+  const checkin = useMemo(() => {
     const chk = { papel: 0, naoFaz: 0, digital: 0 };
-    let baseChk = 0;
+    let base = 0;
     let sistema = 0;
     let quer = 0;
     let barreira = 0;
@@ -613,259 +476,284 @@ export default function GraficosPage() {
       const c = classificarCheckin(e);
       if (c) {
         chk[c] += 1;
-        baseChk += 1;
+        base += 1;
       }
-      if (usaSistema(e)) sistema += 1;
-      if (querAdotar(e)) {
+      const t = textoCompleto(e);
+      if (
+        t.includes("utiliza vários sistemas") ||
+        t.includes("plataformas pagas") ||
+        t.includes("painel da loja")
+      )
+        sistema += 1;
+      if (QUER_ADOTAR.some((k) => t.includes(k))) {
         quer += 1;
-        if (citaBarreiraAdocao(e)) barreira += 1;
+        if (BARREIRA.some((k) => t.includes(k))) barreira += 1;
       }
     }
-    return { chk, baseChk, sistema, total: oficina.length, quer, barreira };
+    return {
+      total: oficina.length,
+      itens: [
+        { rotulo: "Ainda registra em papel", valor: chk.papel, base, cor: "#0a0a0a" },
+        { rotulo: "Tem check-in digital", valor: chk.digital, base, cor: "#15803d" },
+        { rotulo: "Não faz check-in", valor: chk.naoFaz, base, cor: "#a3a3a3" },
+        { rotulo: "Usa algum sistema hoje", valor: sistema, base: oficina.length, cor: "#7C5AC8" },
+        { rotulo: "Citaram querer algo online", valor: quer, base: oficina.length, cor: "#15803d" },
+        { rotulo: "Barreira entre quem quer: custo", valor: barreira, base: quer, cor: "#dc2626" },
+      ].filter((d) => d.valor > 0 || d.base === 0),
+    };
   }, [oficina]);
 
-  // 11) Aperto do dia a dia (P1, P4 e P5)
-  const apertoDia = useMemo(() => {
-    const p1 = perguntasBase[0]?.id;
-    const p4 = perguntasBase[3]?.id;
-    const p5 = perguntasBase[4]?.id;
+  const aperto = useMemo(() => {
+    const p1 = pid("oficina", "problema", 1);
+    const p4 = pid("oficina", "problema", 4);
+    const p5 = pid("oficina", "problema", 5);
     let baseRoteiro = 0;
     let prazoEstoura = 0;
     let cobra = 0;
     let baseDono = 0;
     let dono = 0;
     for (const e of oficina) {
-      const t1 = textoResposta(e, p1).toLowerCase();
+      const t1 = resposta(e, p1).toLowerCase();
       if (t1 && !t1.startsWith("não abordado")) {
         baseRoteiro += 1;
-        if (!t1.includes("não enfrenta") && !t1.includes("não é o prazo"))
-          prazoEstoura += 1;
-        const t45 = `${textoResposta(e, p4)} ${textoResposta(e, p5)}`.toLowerCase();
-        if (
-          ["cobram", "cobrança", "cobrando", "cobra como se", "aparece e pergunta"].some(
-            (k) => t45.includes(k),
-          )
-        )
+        if (!t1.includes("não enfrenta") && !t1.includes("não é o prazo")) prazoEstoura += 1;
+        const t45 = `${resposta(e, p4)} ${resposta(e, p5)}`.toLowerCase();
+        if (["cobram", "cobrança", "cobrando", "cobra como se", "aparece e pergunta"].some((k) => t45.includes(k)))
           cobra += 1;
       }
-      const t4 = textoResposta(e, p4);
+      const t4 = resposta(e, p4);
       if (classificarCanal(t4)) {
         baseDono += 1;
         if (
-          [
-            "próprio dono",
-            "tudo com o dono",
-            "dono no atendimento",
-            "telefone e na graxa",
-            "não tem recepcionista",
-          ].some((k) => t4.toLowerCase().includes(k))
+          ["próprio dono", "tudo com o dono", "dono no atendimento", "telefone e na graxa", "não tem recepcionista"].some(
+            (k) => t4.toLowerCase().includes(k),
+          )
         )
           dono += 1;
       }
     }
-    return { baseRoteiro, prazoEstoura, cobra, baseDono, dono };
+    return {
+      itens: [
+        { rotulo: "O prazo estoura (de vez em quando ou sempre)", valor: prazoEstoura, base: baseRoteiro, cor: "#dc2626" },
+        { rotulo: "O cliente cobra quando demora", valor: cobra, base: baseRoteiro, cor: "#7C5AC8" },
+        { rotulo: "O próprio dono atende e avisa", valor: dono, base: baseDono, cor: "#0a0a0a" },
+      ],
+    };
   }, [oficina, perguntasBase]);
 
-  // 12) Foto/vídeo no aviso ao cliente (P4)
-  const fotoVideoCount = useMemo(() => {
-    const id = perguntasBase[3]?.id;
-    let total = 0;
+  const funil = useMemo(() => {
+    const base = statsOficina.realizadas || 1;
+    const baseAval = statsOficina.avaliaramProblema || 1;
+    return [
+      { rotulo: "Entrevistas realizadas", valor: statsOficina.realizadas, base, cor: "#0a0a0a" },
+      { rotulo: "Avaliaram o problema de prazo", valor: statsOficina.avaliaramProblema, base, cor: "#7C5AC8" },
+      { rotulo: "Confirmam o problema", valor: statsOficina.identificaramProblema, base: baseAval, cor: "#15803d" },
+      { rotulo: "Já perderam serviço por prazo", valor: statsOficina.recusas, base: baseAval, cor: "#dc2626" },
+    ];
+  }, [statsOficina]);
+
+  // ---------- Cliente final ----------
+  const clienteProblema = useMemo<Fatia[]>(
+    () =>
+      [
+        { nome: "Confirmam a falta de informação", valor: statsCliente.identificaramProblema, cor: "#15803d" },
+        {
+          nome: "Não confirmam",
+          valor: Math.max(statsCliente.avaliaramProblema - statsCliente.identificaramProblema, 0),
+          cor: "#0a0a0a",
+        },
+      ].filter((d) => d.valor > 0),
+    [statsCliente],
+  );
+
+  const clientePrazo = useMemo<Fatia[]>(() => {
+    const v = (f: string) => statsCliente.porClienteEntendePrazos.find((x) => x.faixa === f)?.total ?? 0;
+    return [
+      { nome: "Entendem o prazo", valor: v("sim"), cor: "#15803d" },
+      { nome: "Entendem em parte", valor: v("parcial"), cor: "#a3a3a3" },
+      { nome: "Não entendem", valor: v("nao"), cor: "#dc2626" },
+    ].filter((d) => d.valor > 0);
+  }, [statsCliente]);
+
+  const clienteRecusa = useMemo<Fatia[]>(() => {
+    const v = (f: string) => statsCliente.porRecusa.find((x) => x.faixa === f)?.total ?? 0;
+    return [
+      { nome: "Já desistiram ou recusaram", valor: v("sim"), cor: "#dc2626" },
+      { nome: "Não recusaram", valor: v("nao"), cor: "#0a0a0a" },
+      { nome: "Incerto", valor: v("incerto"), cor: "#a3a3a3" },
+    ].filter((d) => d.valor > 0);
+  }, [statsCliente]);
+
+  const clienteUsaria = useMemo<Fatia[]>(() => {
+    const id = pid("cliente", "solucao", 1);
+    let sim = 0;
+    let talvez = 0;
+    let nao = 0;
+    for (const e of cliente) {
+      const s = resposta(e, id).toLowerCase();
+      if (!s) continue;
+      if (s.startsWith("não") || s.includes("não usaria")) nao += 1;
+      else if (s.includes("talvez") || s.includes("depende")) talvez += 1;
+      else sim += 1;
+    }
+    return [
+      { nome: "Usariam o QR code", valor: sim, cor: "#15803d" },
+      { nome: "Talvez / depende", valor: talvez, cor: "#a3a3a3" },
+      { nome: "Não usariam", valor: nao, cor: "#dc2626" },
+    ].filter((d) => d.valor > 0);
+  }, [cliente, perguntasCliente]);
+
+  const clienteConfianca = useMemo(() => {
+    const id = pid("cliente", "solucao", 2);
     let base = 0;
-    for (const e of oficina) {
-      const t = textoResposta(e, id).toLowerCase();
-      if (!classificarCanal(textoResposta(e, id))) continue;
+    const cont = CONFIANCA.map((c) => ({ ...c, total: 0 }));
+    for (const e of cliente) {
+      const s = resposta(e, id).toLowerCase();
+      if (!s) continue;
       base += 1;
-      if (t.includes("foto") || t.includes("vídeo")) total += 1;
+      for (const c of cont) if (c.chaves.some((k) => s.includes(k))) c.total += 1;
     }
-    return { total, base };
-  }, [oficina, perguntasBase]);
+    return {
+      base,
+      itens: cont
+        .map((c, i) => ({ rotulo: c.nome, valor: c.total, base, cor: CORES[i % CORES.length] }))
+        .filter((d) => d.valor > 0),
+    };
+  }, [cliente, perguntasCliente]);
 
-  // 13) Entrevistas por área
+  const clienteDesistir = useMemo(() => {
+    const id = pid("cliente", "solucao", 4);
+    let base = 0;
+    const cont = DESISTIR.map((c) => ({ ...c, total: 0 }));
+    for (const e of cliente) {
+      const s = resposta(e, id).toLowerCase();
+      if (!s) continue;
+      base += 1;
+      for (const c of cont) if (c.chaves.some((k) => s.includes(k))) c.total += 1;
+    }
+    return {
+      base,
+      itens: cont
+        .map((c, i) => ({ rotulo: c.nome, valor: c.total, base, cor: CORES[i % CORES.length] }))
+        .filter((d) => d.valor > 0),
+    };
+  }, [cliente, perguntasCliente]);
+
+  const clientePagar = useMemo(() => {
+    const id = pid("cliente", "solucao", 5);
+    const cont = { nao: 0, talvez: 0, sim: 0 };
+    let base = 0;
+    for (const e of cliente) {
+      const c = classificarPagar(resposta(e, id));
+      if (c) {
+        cont[c] += 1;
+        base += 1;
+      }
+    }
+    return {
+      base,
+      itens: [
+        { rotulo: "Não pagariam nada", valor: cont.nao, base, cor: "#0a0a0a" },
+        { rotulo: "Talvez, se fosse barato", valor: cont.talvez, base, cor: "#a3a3a3" },
+        { rotulo: "Pagariam", valor: cont.sim, base, cor: "#15803d" },
+      ].filter((d) => d.valor > 0),
+    };
+  }, [cliente, perguntasCliente]);
+
+  const clienteFrases = useMemo(() => {
+    const id = pid("cliente", "solucao", 3);
+    return cliente
+      .map((e) => ({ quem: e.cargo || e.nomeEntrevistado, texto: resposta(e, id) }))
+      .filter((f) => f.texto)
+      .slice(0, 4);
+  }, [cliente, perguntasCliente]);
+
+  // ---------- Amostra ----------
+  const composicao = useMemo<Fatia[]>(
+    () => [
+      { nome: "Oficina", valor: oficina.length, cor: "#0a0a0a" },
+      { nome: "Cliente final", valor: cliente.length, cor: "#7C5AC8" },
+    ],
+    [oficina.length, cliente.length],
+  );
+
   const porArea = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const e of oficina) {
-      const a = e.area || "Não informado";
-      map.set(a, (map.get(a) ?? 0) + 1);
-    }
-    return Array.from(map.entries())
+    const m = new Map<string, number>();
+    for (const e of oficina) m.set(e.area || "Não informado", (m.get(e.area || "Não informado") ?? 0) + 1);
+    return Array.from(m.entries())
       .map(([nome, total]) => ({ nome, total }))
       .sort((a, b) => b.total - a.total);
   }, [oficina]);
 
-  // 14) Entrevistas por porte
-  const porPorteGeral = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const e of oficina) {
-      const p = e.porte || "Não informado";
-      map.set(p, (map.get(p) ?? 0) + 1);
-    }
-    return Array.from(map.entries())
+  const porPorte = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const e of oficina) m.set(e.porte || "Não informado", (m.get(e.porte || "Não informado") ?? 0) + 1);
+    return Array.from(m.entries())
       .map(([nome, total]) => ({ nome, total }))
       .sort((a, b) => b.total - a.total);
   }, [oficina]);
 
-  // 15) Confirmação do problema por área
-  const problemaPorArea = useMemo(() => {
-    const map = new Map<
-      string,
-      { sim: number; nao: number; naoAvaliaram: number }
-    >();
+  const confirmaPorArea = useMemo(() => {
+    const m = new Map<string, { sim: number; nao: number; naoAvaliaram: number }>();
     for (const e of oficina) {
       const a = e.area || "Não informado";
-      const atual = map.get(a) ?? { sim: 0, nao: 0, naoAvaliaram: 0 };
-      if (!avaliouProblema(e)) atual.naoAvaliaram += 1;
+      const atual = m.get(a) ?? { sim: 0, nao: 0, naoAvaliaram: 0 };
+      if (!aval(e)) atual.naoAvaliaram += 1;
       else if (e.identificouProblema) atual.sim += 1;
       else atual.nao += 1;
-      map.set(a, atual);
+      m.set(a, atual);
     }
-    return Array.from(map.entries()).map(([nome, v]) => ({ nome, ...v }));
+    return Array.from(m.entries()).map(([nome, v]) => ({ nome, ...v }));
   }, [oficina]);
 
-  // 16) Recusa de serviço por responsável
   const recusaPorResponsavel = useMemo(() => {
-    const map = new Map<
-      string,
-      { sim: number; nao: number; incerto: number; naoAvaliaram: number }
-    >();
+    const m = new Map<string, { sim: number; nao: number; incerto: number; naoAvaliaram: number }>();
     for (const e of oficina) {
-      const r = (e.responsavel || "Não informado").trim() || "Não informado";
-      const atual = map.get(r) ?? {
-        sim: 0,
-        nao: 0,
-        incerto: 0,
-        naoAvaliaram: 0,
-      };
-      if (!avaliouProblema(e)) atual.naoAvaliaram += 1;
+      const rr = (e.responsavel || "Não informado").trim() || "Não informado";
+      const atual = m.get(rr) ?? { sim: 0, nao: 0, incerto: 0, naoAvaliaram: 0 };
+      if (!aval(e)) atual.naoAvaliaram += 1;
       else if (e.recusouServico === "sim") atual.sim += 1;
       else if (e.recusouServico === "nao") atual.nao += 1;
       else if (e.recusouServico === "incerto") atual.incerto += 1;
       else atual.naoAvaliaram += 1;
-      map.set(r, atual);
+      m.set(rr, atual);
     }
-    return Array.from(map.entries()).map(([nome, v]) => ({ nome, ...v }));
+    return Array.from(m.entries()).map(([nome, v]) => ({ nome, ...v }));
   }, [oficina]);
 
-  // 17) Indicações por responsável
-  const indicacoesPorResponsavel = useMemo(() => {
-    const map = new Map<string, number>();
+  const taxaResposta = useMemo(
+    () =>
+      perguntasBase.map((p, i) => {
+        let respondidas = 0;
+        let naoAbordadas = 0;
+        let semResposta = 0;
+        for (const e of oficina) {
+          const t = resposta(e, p.id);
+          if (!t) semResposta += 1;
+          else if (t.startsWith("Não abordado")) naoAbordadas += 1;
+          else respondidas += 1;
+        }
+        return { nome: `P${i + 1}`, respondidas, naoAbordadas, semResposta, texto: p.texto };
+      }),
+    [perguntasBase, oficina],
+  );
+
+  const indicacoes = useMemo(() => {
+    const m = new Map<string, number>();
     for (const e of oficina.filter((x) => x.status === "realizada")) {
-      const r = (e.responsavel || "Não informado").trim() || "Não informado";
-      const qtd = e.indicacoes.filter((i) => i.trim()).length;
-      map.set(r, (map.get(r) ?? 0) + qtd);
+      const rr = (e.responsavel || "Não informado").trim() || "Não informado";
+      m.set(rr, (m.get(rr) ?? 0) + e.indicacoes.filter((i) => i.trim()).length);
     }
-    return Array.from(map.entries())
+    return Array.from(m.entries())
       .map(([nome, total]) => ({ nome, total }))
       .sort((a, b) => b.total - a.total);
-  }, [oficina]);
-
-  // 18) Status das entrevistas
-  const statusEntrevistas = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const e of oficina) {
-      map.set(e.status, (map.get(e.status) ?? 0) + 1);
-    }
-    const rotulos: Record<string, string> = {
-      planejada: "Planejada",
-      agendada: "Agendada",
-      realizada: "Realizada",
-    };
-    return Array.from(map.entries()).map(([status, total]) => ({
-      nome: rotulos[status] ?? status,
-      total,
-    }));
   }, [oficina]);
 
   if (carregando) {
     return <PageHeader title="Gráficos" subtitle="Carregando..." />;
   }
 
-  const semDados = oficina.length === 0 && cliente.length === 0;
-
-  const baseAvaliaram = statsOficina.avaliaramProblema || 1;
-  const percNegam = statsOficina.avaliaramProblema
-    ? Math.round(
-        ((statsOficina.avaliaramProblema - statsOficina.identificaramProblema) /
-          baseAvaliaram) *
-          100,
-      )
-    : 0;
-  const percRecusas = statsOficina.avaliaramProblema
-    ? Math.round((statsOficina.recusas / baseAvaliaram) * 100)
-    : 0;
-  const linhasCheckin = [
-    {
-      rotulo: "Tem check-in digital",
-      valor: checkinSistema.chk.digital,
-      base: checkinSistema.baseChk,
-      cor: "#15803d",
-    },
-    {
-      rotulo: "Ainda registra em papel",
-      valor: checkinSistema.chk.papel,
-      base: checkinSistema.baseChk,
-      cor: "#0a0a0a",
-    },
-    {
-      rotulo: "Não faz check-in (pretende adotar)",
-      valor: checkinSistema.chk.naoFaz,
-      base: checkinSistema.baseChk,
-      cor: "#a3a3a3",
-    },
-    {
-      rotulo: "Usa algum sistema hoje",
-      valor: checkinSistema.sistema,
-      base: checkinSistema.total,
-      cor: "#7C5AC8",
-    },
-    {
-      rotulo: "Citaram querer algo online (check-in/aviso)",
-      valor: checkinSistema.quer,
-      base: checkinSistema.total,
-      cor: "#15803d",
-    },
-    {
-      rotulo: "Barreira entre quem quer: custo / complexidade",
-      valor: checkinSistema.barreira,
-      base: checkinSistema.quer,
-      cor: "#dc2626",
-    },
-  ].map((l) => ({
-    ...l,
-    perc: l.base ? Math.round((l.valor / l.base) * 100) : 0,
-  }));
-
-  const linhasAperto = [
-    {
-      rotulo: "Prazo estoura (de vez em quando ou sempre)",
-      valor: apertoDia.prazoEstoura,
-      base: apertoDia.baseRoteiro,
-      cor: "#dc2626",
-    },
-    {
-      rotulo: "Cliente cobra ou reclama quando demora",
-      valor: apertoDia.cobra,
-      base: apertoDia.baseRoteiro,
-      cor: "#7C5AC8",
-    },
-    {
-      rotulo: "O próprio dono é quem atende e avisa",
-      valor: apertoDia.dono,
-      base: apertoDia.baseDono,
-      cor: "#0a0a0a",
-    },
-  ].map((l) => ({
-    ...l,
-    perc: l.base ? Math.round((l.valor / l.base) * 100) : 0,
-  }));
-
-  const whatsappCount =
-    canalAviso.dados.find((d) => d.nome === "WhatsApp")?.valor ?? 0;
-  const percWhatsapp = canalAviso.base
-    ? Math.round((whatsappCount / canalAviso.base) * 100)
-    : 0;
-  const percFotoVideo = fotoVideoCount.base
-    ? Math.round((fotoVideoCount.total / fotoVideoCount.base) * 100)
-    : 0;
+  const semDados = entrevistas.length === 0;
 
   return (
     <div>
@@ -880,989 +768,432 @@ export default function GraficosPage() {
           gráficos.
         </EmptyState>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card className="lg:col-span-2">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-ink">
-                  Cobertura dos dois lados
-                </h2>
-                <p className="mt-1 text-caption text-mid-gray">
-                  A oficina já foi ouvida. O cliente final ainda não.
-                </p>
-              </div>
-              <Badge
-                variant={cliente.length >= META_CLIENTE ? "solid" : "outline"}
+        <>
+          <div className="mb-5 grid gap-3 sm:grid-cols-3">
+            <MiniStat
+              rotulo="Oficina"
+              valor={`${oficina.length}`}
+              detalhe={`${statsOficina.percIdentificaram}% confirmam o problema · ${statsOficina.recusas} perderam serviço`}
+            />
+            <MiniStat
+              rotulo="Cliente final"
+              valor={`${cliente.length}`}
+              detalhe={`${statsCliente.percIdentificaram}% confirmam a falta de informação`}
+            />
+            <MiniStat
+              rotulo="Amostra total"
+              valor={`${entrevistas.length}`}
+              detalhe="oficinas e clientes finais entrevistados"
+            />
+          </div>
+
+          <div className="mb-5 flex flex-wrap gap-2">
+            {ABAS.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => setAba(a.id)}
+                className={`inline-flex h-9 items-center rounded-buttons px-3 text-sm font-medium transition-colors ${
+                  aba === a.id
+                    ? "bg-ink text-[#fafafa]"
+                    : "border border-hairline text-ink hover:bg-canvas"
+                }`}
               >
-                {cliente.length >= META_CLIENTE
-                  ? "Cliente validado"
-                  : "Cliente a iniciar"}
-              </Badge>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-caption text-mid-gray">Oficina</p>
-                <p className="mt-1 text-xl font-semibold text-ink">
-                  {oficina.length}{" "}
-                  <span className="text-sm font-normal text-mid-gray">
-                    de {META_ENTREVISTAS}
-                  </span>
-                </p>
-                <p className="mt-1 text-caption text-mid-gray">
-                  {statsOficina.percIdentificaram}% confirmam o problema ·{" "}
-                  {statsOficina.recusas} já perderam serviço por prazo
-                </p>
-              </div>
-              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-caption text-mid-gray">Cliente final</p>
-                <p className="mt-1 text-xl font-semibold text-ink">
-                  {cliente.length}{" "}
-                  <span className="text-sm font-normal text-mid-gray">
-                    de {META_CLIENTE}
-                  </span>
-                </p>
-                <p className="mt-1 text-caption text-mid-gray">
-                  roteiro pronto · entrevistas com motoristas pendentes
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={cobertura}
-                  layout="vertical"
-                  margin={{ top: 4, right: 16, bottom: 4, left: 8 }}
-                >
-                  <XAxis
-                    type="number"
-                    allowDecimals={false}
-                    tickLine={false}
-                    axisLine={{ stroke: "#e5e5e5" }}
-                    tick={tickStyle}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="nome"
-                    width={100}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={tickStyle}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "#f5f5f5" }}
-                    contentStyle={tooltipStyle}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12, color: "#737373" }} />
-                  <Bar
-                    dataKey="total"
-                    name="Entrevistas"
-                    fill="#0a0a0a"
-                    radius={[0, 6, 6, 0]}
-                  />
-                  <Bar
-                    dataKey="meta"
-                    name="Meta"
-                    fill="#e5e5e5"
-                    radius={[0, 6, 6, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <div className="mt-2 lg:col-span-2">
-            <h2 className="text-sm font-semibold text-ink">
-              1. Oficina — o problema
-            </h2>
-            <p className="text-caption text-mid-gray">
-              O que as 26 entrevistas com donos, recepção e mecânicos mostram
-              sobre prazo, organização e comunicação.
-            </p>
-          </div>
-          <Card className="lg:col-span-2">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-ink">
-                  Validação do problema
-                </h2>
-                <p className="mt-1 text-caption text-mid-gray">
-                  {statsOficina.realizadas} entrevistas realizadas · Meta:{" "}
-                  {META_ENTREVISTAS} entrevistas e {META_PERC_PROBLEMA}% das oficinas
-                  confirmando o problema
-                </p>
-              </div>
-              <Badge variant={statsOficina.validado ? "solid" : "soft"}>
-                {statsOficina.validado ? "Problema validado ✓" : "Ainda em validação"}
-              </Badge>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-caption text-mid-gray">Confirmam o problema</p>
-                <p className="mt-1 text-xl font-semibold text-ink">
-                  {statsOficina.percIdentificaram}%
-                </p>
-                <p className="mt-1 text-caption text-mid-gray">
-                  {statsOficina.identificaramProblema} de {statsOficina.avaliaramProblema} que
-                  avaliaram o problema
-                </p>
-              </div>
-              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-caption text-mid-gray">Negam o problema</p>
-                <p className="mt-1 text-xl font-semibold text-ink">
-                  {percNegam}%
-                </p>
-                <p className="mt-1 text-caption text-mid-gray">
-                  {statsOficina.avaliaramProblema - statsOficina.identificaramProblema} de{" "}
-                  {statsOficina.avaliaramProblema} que avaliaram o problema
-                </p>
-              </div>
-              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-caption text-mid-gray">
-                  Não avaliaram o problema
-                </p>
-                <p className="mt-1 text-xl font-semibold text-ink">
-                  {statsOficina.realizadas - statsOficina.avaliaramProblema}
-                </p>
-                <p className="mt-1 text-caption text-mid-gray">
-                  das {statsOficina.realizadas} entrevistas realizadas
-                </p>
-              </div>
-              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-caption text-mid-gray">
-                  Já perderam serviço por prazo
-                </p>
-                <p className="mt-1 text-xl font-semibold text-ink">
-                  {statsOficina.recusas}
-                </p>
-                <p className="mt-1 text-caption text-mid-gray">
-                  recusas de serviço registradas
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              O problema é real? (aprovação × negação)
-            </h2>
-            <p className="mb-3 text-caption text-mid-gray">
-              {statsOficina.realizadas} entrevistas realizadas — {statsOficina.avaliaramProblema}{" "}
-              avaliaram o problema de prazo (
-              {statsOficina.realizadas - statsOficina.avaliaramProblema} não avaliaram)
-            </p>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={dadosProblema}
-                    dataKey="valor"
-                    nameKey="nome"
-                    outerRadius={85}
-                    label={rotuloPercentual}
-                  >
-                    {dadosProblema.map((d) => (
-                      <Cell key={d.nome} fill={d.cor} />
-                    ))}
-                  </Pie>
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, color: "#737373" }}
-                    iconType="circle"
-                  />
-                  <Tooltip contentStyle={tooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <div className="mt-2 lg:col-span-2">
-            <h2 className="text-sm font-semibold text-ink">
-              2. Cliente final — o que a oficina relata
-            </h2>
-            <p className="text-caption text-mid-gray">
-              A visão da oficina sobre o comportamento e a comunicação com o
-              motorista. Ainda não é a voz do cliente final.
-            </p>
+                {a.nome}
+              </button>
+            ))}
           </div>
 
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Já recusou serviço por causa do prazo?
-            </h2>
-            <p className="mb-3 text-caption text-mid-gray">
-              {statsOficina.realizadas} entrevistas realizadas — {statsOficina.recusas} das{" "}
-              {statsOficina.avaliaramProblema} que avaliaram já perderam serviço por não
-              entender o prazo
-            </p>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={dadosRecusaGeral}
-                    dataKey="valor"
-                    nameKey="nome"
-                    outerRadius={85}
-                    label={rotuloPercentual}
-                  >
-                    {dadosRecusaGeral.map((d) => (
-                      <Cell key={d.nome} fill={d.cor} />
-                    ))}
-                  </Pie>
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, color: "#737373" }}
-                    iconType="circle"
-                  />
-                  <Tooltip contentStyle={tooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Como o cliente é avisado hoje
-            </h2>
-            <p className="mb-3 text-caption text-mid-gray">
-              De {canalAviso.base} entrevistas que descreveram como avisam o
-              cliente (pergunta 4 do roteiro), de {statsOficina.realizadas} realizadas
-            </p>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={canalAviso.dados}
-                    dataKey="valor"
-                    nameKey="nome"
-                    outerRadius={85}
-                    label={rotuloPercentual}
-                  >
-                    {canalAviso.dados.map((d) => (
-                      <Cell key={d.nome} fill={d.cor} />
-                    ))}
-                  </Pie>
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, color: "#737373" }}
-                    iconType="circle"
-                  />
-                  <Tooltip contentStyle={tooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              O aviso tem padrão? (ou depende de lembrar)
-            </h2>
-            <p className="mb-3 text-caption text-mid-gray">
-              Mesma base da pergunta 4 ({padraoAviso.base} entrevistas) —
-              nenhuma tem aviso automático: é tudo manual
-            </p>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={padraoAviso.dados}
-                    dataKey="valor"
-                    nameKey="nome"
-                    outerRadius={85}
-                    label={rotuloPercentual}
-                  >
-                    {padraoAviso.dados.map((d) => (
-                      <Cell key={d.nome} fill={d.cor} />
-                    ))}
-                  </Pie>
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, color: "#737373" }}
-                    iconType="circle"
-                  />
-                  <Tooltip contentStyle={tooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Como o prazo é passado ao cliente
-            </h2>
-            <p className="mb-3 text-caption text-mid-gray">
-              De {prazoEscrito.base} entrevistas que detalharam como explicam o
-              prazo (pergunta 3 do roteiro) · por escrito = orçamento ou ordem
-              de serviço
-            </p>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={prazoEscrito.dados}
-                    dataKey="valor"
-                    nameKey="nome"
-                    outerRadius={85}
-                    label={rotuloPercentual}
-                  >
-                    {prazoEscrito.dados.map((d) => (
-                      <Cell key={d.nome} fill={d.cor} />
-                    ))}
-                  </Pie>
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, color: "#737373" }}
-                    iconType="circle"
-                  />
-                  <Tooltip contentStyle={tooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <div className="mt-2 lg:col-span-2">
-            <h2 className="text-sm font-semibold text-ink">
-              3. Oficina — como o serviço acontece hoje
-            </h2>
-            <p className="text-caption text-mid-gray">
-              Check-in, sistemas e o aperto do dia a dia. É aqui que a solução
-              precisa caber sem virar mais uma tarefa.
-            </p>
-          </div>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Check-in hoje: como é feito
-            </h2>
-            <p className="mb-4 text-caption text-mid-gray">
-              O que os entrevistados contaram sobre o registro do veículo,
-              sistemas usados e adoção — bases indicadas em cada linha
-            </p>
-            <div className="space-y-3">
-              {linhasCheckin.map((l) => (
-                <div key={l.rotulo}>
-                  <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
-                    <span className="text-ink-soft">{l.rotulo}</span>
-                    <span className="font-semibold text-ink">
-                      {l.valor} de {l.base}{" "}
-                      <span className="text-caption font-normal text-mid-gray">
-                        ({l.perc}%)
-                      </span>
-                    </span>
+          {aba === "oficina" && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card className="lg:col-span-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-ink">
+                      Validação da oficina
+                    </h2>
+                    <p className="mt-1 text-caption text-mid-gray">
+                      {statsOficina.realizadas} entrevistas realizadas · meta:{" "}
+                      {META_ENTREVISTAS} entrevistas e {META_PERC_PROBLEMA}% confirmando o
+                      problema
+                    </p>
                   </div>
-                  <div className="h-3 w-full overflow-hidden rounded-full bg-canvas">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${l.perc}%`, background: l.cor }}
-                    />
-                  </div>
+                  <Badge variant={statsOficina.validado ? "solid" : "soft"}>
+                    {statsOficina.validado ? "Problema validado" : "Ainda em validação"}
+                  </Badge>
                 </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              O aperto do dia a dia
-            </h2>
-            <p className="mb-4 text-caption text-mid-gray">
-              Leitura das respostas das entrevistas do roteiro — bases indicadas
-              em cada linha
-            </p>
-            <div className="space-y-3">
-              {linhasAperto.map((l) => (
-                <div key={l.rotulo}>
-                  <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
-                    <span className="text-ink-soft">{l.rotulo}</span>
-                    <span className="font-semibold text-ink">
-                      {l.valor} de {l.base}{" "}
-                      <span className="text-caption font-normal text-mid-gray">
-                        ({l.perc}%)
-                      </span>
-                    </span>
-                  </div>
-                  <div className="h-3 w-full overflow-hidden rounded-full bg-canvas">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${l.perc}%`, background: l.cor }}
-                    />
-                  </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <MiniStat
+                    rotulo="Confirmam o problema"
+                    valor={`${statsOficina.percIdentificaram}%`}
+                    detalhe={`${statsOficina.identificaramProblema} de ${statsOficina.avaliaramProblema} que avaliaram`}
+                  />
+                  <MiniStat
+                    rotulo="Negam o problema"
+                    valor={`${
+                      statsOficina.avaliaramProblema
+                        ? Math.round(
+                            ((statsOficina.avaliaramProblema - statsOficina.identificaramProblema) /
+                              statsOficina.avaliaramProblema) *
+                              100,
+                          )
+                        : 0
+                    }%`}
+                    detalhe={`${statsOficina.avaliaramProblema - statsOficina.identificaramProblema} de ${statsOficina.avaliaramProblema}`}
+                  />
+                  <MiniStat
+                    rotulo="Não avaliaram o problema"
+                    valor={`${statsOficina.realizadas - statsOficina.avaliaramProblema}`}
+                    detalhe={`das ${statsOficina.realizadas} entrevistas`}
+                  />
+                  <MiniStat
+                    rotulo="Perderam serviço por prazo"
+                    valor={`${statsOficina.recusas}`}
+                    detalhe="recusas de serviço registradas"
+                  />
                 </div>
-              ))}
-            </div>
-          </Card>
+              </Card>
 
-          <div className="mt-2 lg:col-span-2">
-            <h2 className="text-sm font-semibold text-ink">
-              4. Cliente final — o que falta ouvir
-            </h2>
-            <p className="text-caption text-mid-gray">
-              Ainda não há entrevista com motorista. Os gráficos abaixo ficam
-              prontos e passam a mostrar os dados assim que as conversas forem
-              registradas.
-            </p>
-          </div>
+              <Titulo nota="A dor que a oficina confirma, com os números firmes (14 de 22).">
+                1. O problema
+              </Titulo>
+              <PizzaCard
+                titulo="O problema é real?"
+                subtitulo={`Base: ${statsOficina.avaliaramProblema} de ${statsOficina.realizadas} entrevistas que avaliaram o problema`}
+                dados={oficinaProblema}
+                vazio="Nenhuma entrevista avaliou o problema ainda."
+              />
+              <PizzaCard
+                titulo="Já recusou serviço por causa do prazo?"
+                subtitulo={`${statsOficina.recusas} das ${statsOficina.avaliaramProblema} oficinas que avaliaram já perderam serviço`}
+                dados={oficinaRecusa}
+                vazio="Sem recusas registradas até agora."
+              />
 
-          <PizzaCard
-            titulo="Cliente final: confirma a falta de informação?"
-            subtitulo={`${statsCliente.avaliaramProblema} de ${cliente.length} cliente(s) final(is) responderam`}
-            dados={dadosClienteProblema}
-            vazio="Nenhuma conversa com motorista registrada ainda."
-          />
+              <Titulo nota="Como a oficina avisa e passa o prazo. É aqui que a conversa com o cliente trava.">
+                2. Comunicação com o cliente
+              </Titulo>
+              <BarList
+                titulo="Como o cliente é avisado hoje"
+                subtitulo={`De ${canal.base} entrevistas que descreveram o aviso`}
+                itens={canal.itens}
+              />
+              <BarList
+                titulo="O aviso tem padrão?"
+                subtitulo={`Mesma base da pergunta 4 (${padrao.base} entrevistas)`}
+                itens={padrao.itens}
+              />
+              <BarList
+                titulo="Como o prazo é passado"
+                subtitulo="Por escrito = orçamento ou ordem de serviço"
+                itens={prazo.itens}
+              />
 
-          <PizzaCard
-            titulo="Cliente final: entende o prazo da oficina?"
-            subtitulo={`${cliente.length} cliente(s) final(is) ouvido(s) até agora`}
-            dados={dadosClientePrazo}
-            vazio="O prazo percebido pelo cliente ainda não foi medido."
-          />
+              <Titulo nota="O registro do carro e os apertos do dia a dia.">
+                3. Como o serviço acontece hoje
+              </Titulo>
+              <BarList
+                titulo="Check-in e sistemas"
+                subtitulo={`Bases indicadas em cada linha · ${checkin.total} oficinas`}
+                itens={checkin.itens}
+              />
+              <BarList
+                titulo="O aperto do dia a dia"
+                subtitulo="Leitura das respostas do roteiro"
+                itens={aperto.itens}
+              />
 
-          <PizzaCard
-            titulo="Cliente final: já desistiu ou recusou serviço?"
-            subtitulo={`${cliente.length} cliente(s) final(is) ouvido(s) até agora`}
-            dados={dadosClienteRecusa}
-            vazio="A recusa do lado do cliente ainda não foi medida."
-          />
-
-          <Card className="lg:col-span-2">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-ink">
-                  O que falta validar
-                </h2>
-                <p className="mt-1 text-caption text-mid-gray">
-                  O problema da oficina está firme. A dor e a solução do cliente
-                  final ainda não.
-                </p>
-              </div>
-              <Badge variant="outline">Pendente</Badge>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-sm font-semibold text-ink">
-                  Oficina · solução
-                </p>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-soft marker:text-mid-gray">
-                  <li>Check-in por áudio em menos de 2 minutos.</li>
-                  <li>O que o painel precisa mostrar sem precisar perguntar.</li>
-                  <li>Quanto tempo do dono deixa de ir para o cliente.</li>
-                  <li>Quanto valeria por mês: R$ 49 ou R$ 99.</li>
-                </ul>
-              </div>
-              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-sm font-semibold text-ink">
-                  Cliente final · problema e solução
-                </p>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-soft marker:text-mid-gray">
-                  <li>Como ele fica sabendo do andamento hoje.</li>
-                  <li>Quantas vezes cobra notícia da oficina.</li>
-                  <li>Se usaria o QR code e o que precisaria ver para confiar.</li>
-                  <li>Se o aviso faria escolher a oficina de novo.</li>
-                </ul>
+              <Titulo nota="Da entrevista realizada até a perda de serviço.">4. Funil</Titulo>
+              <div className="lg:col-span-2">
+                <BarList titulo="Funil da validação" itens={funil} />
               </div>
             </div>
-            <p className="mt-3 text-caption text-mid-gray">
-              As perguntas dos dois lados estão na página{" "}
-              <Link href="/perguntas" className="font-medium text-ink underline">
-                Perguntas
-              </Link>
-              .
-            </p>
-          </Card>
+          )}
 
-          <Card className="lg:col-span-2">
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Métricas do beta
-            </h2>
-            <p className="mb-4 text-caption text-mid-gray">
-              O que medir para saber se o check-in por áudio, o painel e o QR
-              code funcionam de verdade, nos dois lados.
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {METRICAS_BETA.map((m) => (
-                <div
-                  key={m.metrica}
-                  className="rounded-cards border border-hairline bg-surface-alt p-3"
-                >
-                  <Badge variant="outline">{m.lado}</Badge>
-                  <p className="mt-2 text-sm font-medium text-ink">
-                    {m.metrica}
-                  </p>
-                  <p className="mt-1 text-caption text-mid-gray">{m.como}</p>
+          {aba === "cliente" && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {temDemo && (
+                <Card className="lg:col-span-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Badge variant="solid">Demonstração</Badge>
+                    <p className="text-sm text-ink-soft">
+                      As {cliente.length} entrevistas do cliente final são{" "}
+                      <strong className="font-semibold text-ink">
+                        exemplos criados para mostrar como a página fica
+                      </strong>
+                      . Troque pelas respostas reais quando ouvir os clientes.
+                    </p>
+                  </div>
+                </Card>
+              )}
+
+              <Card className="lg:col-span-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-ink">
+                      Validação do cliente final
+                    </h2>
+                    <p className="mt-1 text-caption text-mid-gray">
+                      {cliente.length} de {META_CLIENTE} entrevistas com motoristas
+                    </p>
+                  </div>
+                  <Badge variant="outline">Meta {META_CLIENTE}</Badge>
                 </div>
-              ))}
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <MiniStat
+                    rotulo="Confirmam a falta de informação"
+                    valor={`${statsCliente.percIdentificaram}%`}
+                    detalhe={`${statsCliente.identificaramProblema} de ${statsCliente.avaliaramProblema}`}
+                  />
+                  <MiniStat
+                    rotulo="Entendem o prazo"
+                    valor={`${
+                      statsCliente.porClienteEntendePrazos.find((f) => f.faixa === "sim")?.total ?? 0
+                    }`}
+                    detalhe={`de ${statsCliente.avaliaramProblema} · ${
+                      statsCliente.porClienteEntendePrazos.find((f) => f.faixa === "parcial")?.total ?? 0
+                    } entendem em parte`}
+                  />
+                  <MiniStat
+                    rotulo="Já desistiram ou recusaram"
+                    valor={`${statsCliente.recusas}`}
+                    detalhe="por atraso ou falta de aviso"
+                  />
+                  <MiniStat
+                    rotulo="Usariam o QR code"
+                    valor={`${
+                      clienteUsaria.find((d) => d.nome.includes("Usariam"))?.valor ?? 0
+                    }`}
+                    detalhe={`de ${cliente.length} clientes ouvidos`}
+                  />
+                </div>
+              </Card>
+
+              <Titulo nota="O que o motorista responde sobre a falta de informação hoje.">
+                1. A dor do cliente final
+              </Titulo>
+              <PizzaCard
+                titulo="Confirma a falta de informação?"
+                subtitulo={`Base: ${statsCliente.avaliaramProblema} clientes que avaliaram`}
+                dados={clienteProblema}
+                vazio="Nenhum cliente final avaliou a dor ainda."
+              />
+              <PizzaCard
+                titulo="Entende o prazo da oficina?"
+                subtitulo={`Base: ${statsCliente.avaliaramProblema} clientes`}
+                dados={clientePrazo}
+                vazio="Nenhum cliente final respondeu sobre o prazo ainda."
+              />
+              <PizzaCard
+                titulo="Já desistiu ou recusou um serviço?"
+                subtitulo={`Base: ${statsCliente.avaliaramProblema} clientes`}
+                dados={clienteRecusa}
+                vazio="Nenhum cliente final respondeu sobre recusa ainda."
+              />
+
+              <Titulo nota="O que o cliente final responde sobre a solução por QR code.">
+                2. A solução na visão do cliente
+              </Titulo>
+              <PizzaCard
+                titulo="Usaria o QR code para acompanhar?"
+                subtitulo={`Base: ${cliente.length} clientes ouvidos`}
+                dados={clienteUsaria}
+                vazio="Nenhum cliente final respondeu sobre o QR code ainda."
+              />
+              <BarList
+                titulo="O que precisaria ver para confiar"
+                subtitulo={`Menções em ${clienteConfianca.base} respostas`}
+                itens={clienteConfianca.itens}
+              />
+              <BarList
+                titulo="O que faria desistir de usar"
+                subtitulo={`Menções em ${clienteDesistir.base} respostas`}
+                itens={clienteDesistir.itens}
+              />
+              <BarList
+                titulo="Pagaria algo pelo acompanhamento?"
+                subtitulo={`Base: ${clientePagar.base} clientes · o cliente final não paga`}
+                itens={clientePagar.itens}
+              />
+
+              {clienteFrases.length > 0 && (
+                <Card className="lg:col-span-2">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-ink">
+                        Frases do cliente final
+                      </h3>
+                      <p className="mt-1 text-caption text-mid-gray">
+                        Respostas a "você confiaria mais em uma oficina que avisa o
+                        andamento?"
+                      </p>
+                    </div>
+                    <Link
+                      href="/respostas"
+                      className="text-caption font-medium text-ink underline underline-offset-2"
+                    >
+                      Ver todas as respostas
+                    </Link>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {clienteFrases.map((f, i) => (
+                      <blockquote
+                        key={i}
+                        className="rounded-cards border border-hairline bg-surface-alt p-3"
+                      >
+                        <p className="text-sm text-ink-soft">"{f.texto}"</p>
+                        <p className="mt-2 text-caption text-mid-gray">{f.quem}</p>
+                      </blockquote>
+                    ))}
+                  </div>
+                </Card>
+              )}
             </div>
-          </Card>
+          )}
 
-          <div className="mt-2 lg:col-span-2">
-            <h2 className="text-sm font-semibold text-ink">
-              5. Amostra e qualidade
-            </h2>
-            <p className="text-caption text-mid-gray">
-              Quem foi ouvido, por área e porte, e como as entrevistas se
-              distribuem.
-            </p>
-          </div>
-
-          <Card>
-            <h2 className="mb-4 text-sm font-semibold text-ink">
-              Confirmam o problema, por porte
-            </h2>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={problemaPorPorte}>
-                  <XAxis
-                    dataKey="nome"
-                    tickLine={false}
-                    axisLine={{ stroke: "#e5e5e5" }}
-                    tick={tickStyle}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    width={28}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={tickStyle}
-                  />
-                  <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
-                  <Legend wrapperStyle={{ fontSize: 12, color: "#737373" }} />
-                  <Bar dataKey="sim" name="Confirmam" stackId="a" fill="#15803d" />
-                  <Bar dataKey="nao" name="Não confirmam" stackId="a" fill="#0a0a0a" />
-                  <Bar
-                    dataKey="naoAvaliaram"
-                    name="Não avaliaram"
-                    stackId="a"
-                    fill="#e5e5e5"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Entrevistas por área
-            </h2>
-            <p className="mb-3 text-caption text-mid-gray">
-              Onde a pessoa entrevistada atua dentro da oficina
-            </p>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={porArea}
-                    dataKey="total"
-                    nameKey="nome"
-                    outerRadius={85}
-                    label={rotuloPercentual}
-                  >
-                    {porArea.map((d, i) => (
-                      <Cell
-                        key={d.nome}
-                        fill={
-                          [
-                            "#0a0a0a",
-                            "#7C5AC8",
-                            "#15803d",
-                            "#dc2626",
-                            "#a3a3a3",
-                            "#a78bfa",
-                          ][i % 6]
-                        }
+          {aba === "amostra" && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <PizzaCard
+                titulo="Composição da amostra"
+                subtitulo={`${entrevistas.length} entrevistas no total`}
+                dados={composicao}
+                vazio="Sem entrevistas."
+                altura="h-56"
+              />
+              <Card>
+                <h3 className="mb-4 text-sm font-semibold text-ink">
+                  Entrevistas por área
+                </h3>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={porArea}>
+                      <XAxis dataKey="nome" tickLine={false} axisLine={{ stroke: "#e5e5e5" }} tick={tickStyle} />
+                      <YAxis allowDecimals={false} width={28} tickLine={false} axisLine={false} tick={tickStyle} />
+                      <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
+                      <Bar dataKey="total" name="Entrevistas" radius={[6, 6, 0, 0]}>
+                        {porArea.map((d, i) => (
+                          <Cell key={d.nome} fill={CORES[i % CORES.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+              <Card>
+                <h3 className="mb-4 text-sm font-semibold text-ink">
+                  Entrevistas por porte
+                </h3>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={porPorte}>
+                      <XAxis dataKey="nome" tickLine={false} axisLine={{ stroke: "#e5e5e5" }} tick={tickStyle} />
+                      <YAxis allowDecimals={false} width={28} tickLine={false} axisLine={false} tick={tickStyle} />
+                      <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
+                      <Bar dataKey="total" name="Entrevistas" fill="#0a0a0a" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+              <Card>
+                <h3 className="mb-4 text-sm font-semibold text-ink">
+                  Confirmação do problema por área
+                </h3>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={confirmaPorArea}>
+                      <XAxis dataKey="nome" tickLine={false} axisLine={{ stroke: "#e5e5e5" }} tick={tickStyle} />
+                      <YAxis allowDecimals={false} width={28} tickLine={false} axisLine={false} tick={tickStyle} />
+                      <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
+                      <Legend wrapperStyle={{ fontSize: 12, color: "#737373" }} />
+                      <Bar dataKey="sim" name="Confirmam" stackId="a" fill="#15803d" />
+                      <Bar dataKey="nao" name="Não confirmam" stackId="a" fill="#0a0a0a" />
+                      <Bar dataKey="naoAvaliaram" name="Não avaliaram" stackId="a" fill="#e5e5e5" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+              <Card>
+                <h3 className="mb-4 text-sm font-semibold text-ink">
+                  Recusa de serviço por responsável
+                </h3>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={recusaPorResponsavel}>
+                      <XAxis dataKey="nome" tickLine={false} axisLine={{ stroke: "#e5e5e5" }} tick={tickStyle} />
+                      <YAxis allowDecimals={false} width={28} tickLine={false} axisLine={false} tick={tickStyle} />
+                      <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
+                      <Legend wrapperStyle={{ fontSize: 12, color: "#737373" }} />
+                      <Bar dataKey="sim" name="Já recusou" stackId="a" fill="#dc2626" />
+                      <Bar dataKey="nao" name="Não recusou" stackId="a" fill="#0a0a0a" />
+                      <Bar dataKey="incerto" name="Incerto" stackId="a" fill="#a3a3a3" />
+                      <Bar dataKey="naoAvaliaram" name="Não avaliaram" stackId="a" fill="#e5e5e5" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+              <Card>
+                <h3 className="mb-4 text-sm font-semibold text-ink">
+                  Indicações por responsável
+                </h3>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={indicacoes}>
+                      <XAxis dataKey="nome" tickLine={false} axisLine={{ stroke: "#e5e5e5" }} tick={tickStyle} />
+                      <YAxis allowDecimals={false} width={28} tickLine={false} axisLine={false} tick={tickStyle} />
+                      <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
+                      <Bar dataKey="total" name="Indicações" fill="#7C5AC8" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+              <Card className="lg:col-span-2">
+                <h3 className="text-sm font-semibold text-ink">
+                  Taxa de resposta por pergunta
+                </h3>
+                <p className="mb-4 mt-1 text-caption text-mid-gray">
+                  Roteiro da oficina · respondidas, não abordadas ou sem resposta
+                </p>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={taxaResposta}>
+                      <XAxis dataKey="nome" tickLine={false} axisLine={{ stroke: "#e5e5e5" }} tick={tickStyle} />
+                      <YAxis allowDecimals={false} width={28} tickLine={false} axisLine={false} tick={tickStyle} />
+                      <Tooltip
+                        cursor={{ fill: "#f5f5f5" }}
+                        contentStyle={tooltipStyle}
+                        formatter={(v: number, _n, item) => [
+                          `${v} entrevistas`,
+                          (item?.payload as { texto?: string })?.texto ?? "",
+                        ]}
                       />
-                    ))}
-                  </Pie>
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, color: "#737373" }}
-                    iconType="circle"
-                  />
-                  <Tooltip contentStyle={tooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Entrevistas por porte
-            </h2>
-            <p className="mb-3 text-caption text-mid-gray">
-              Distribuição das oficinas por tamanho
-            </p>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={porPorteGeral}>
-                  <XAxis
-                    dataKey="nome"
-                    tickLine={false}
-                    axisLine={{ stroke: "#e5e5e5" }}
-                    tick={tickStyle}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    width={28}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={tickStyle}
-                  />
-                  <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
-                  <Bar dataKey="total" name="Entrevistas" fill="#0a0a0a" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Confirmação do problema por área
-            </h2>
-            <p className="mb-3 text-caption text-mid-gray">
-              Quem confirma, quem não confirma e quem não avaliou o problema
-            </p>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={problemaPorArea}>
-                  <XAxis
-                    dataKey="nome"
-                    tickLine={false}
-                    axisLine={{ stroke: "#e5e5e5" }}
-                    tick={tickStyle}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    width={28}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={tickStyle}
-                  />
-                  <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
-                  <Legend wrapperStyle={{ fontSize: 12, color: "#737373" }} />
-                  <Bar dataKey="sim" name="Confirmam" stackId="a" fill="#15803d" />
-                  <Bar dataKey="nao" name="Não confirmam" stackId="a" fill="#0a0a0a" />
-                  <Bar
-                    dataKey="naoAvaliaram"
-                    name="Não avaliaram"
-                    stackId="a"
-                    fill="#e5e5e5"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Recusa de serviço por responsável
-            </h2>
-            <p className="mb-3 text-caption text-mid-gray">
-              Quem entrevistou e quantas oficinas já perderam serviço por prazo
-            </p>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={recusaPorResponsavel}>
-                  <XAxis
-                    dataKey="nome"
-                    tickLine={false}
-                    axisLine={{ stroke: "#e5e5e5" }}
-                    tick={tickStyle}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    width={28}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={tickStyle}
-                  />
-                  <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
-                  <Legend wrapperStyle={{ fontSize: 12, color: "#737373" }} />
-                  <Bar dataKey="sim" name="Já recusou" stackId="a" fill="#dc2626" />
-                  <Bar dataKey="nao" name="Não recusou" stackId="a" fill="#0a0a0a" />
-                  <Bar dataKey="incerto" name="Incerto" stackId="a" fill="#a3a3a3" />
-                  <Bar
-                    dataKey="naoAvaliaram"
-                    name="Não avaliaram"
-                    stackId="a"
-                    fill="#e5e5e5"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Indicações por responsável
-            </h2>
-            <p className="mb-3 text-caption text-mid-gray">
-              Quantas oficinas cada pessoa indicou para ampliar a amostra
-            </p>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={indicacoesPorResponsavel}>
-                  <XAxis
-                    dataKey="nome"
-                    tickLine={false}
-                    axisLine={{ stroke: "#e5e5e5" }}
-                    tick={tickStyle}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    width={28}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={tickStyle}
-                  />
-                  <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
-                  <Bar
-                    dataKey="total"
-                    name="Indicações"
-                    fill="#7C5AC8"
-                    radius={[6, 6, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Status das entrevistas
-            </h2>
-            <p className="mb-3 text-caption text-mid-gray">
-              Planejadas, agendadas e realizadas
-            </p>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusEntrevistas}
-                    dataKey="total"
-                    nameKey="nome"
-                    outerRadius={85}
-                    label={rotuloPercentual}
-                  >
-                    {statusEntrevistas.map((d) => (
-                      <Cell
-                        key={d.nome}
-                        fill={
-                          d.nome === "Realizada"
-                            ? "#0a0a0a"
-                            : d.nome === "Agendada"
-                              ? "#737373"
-                              : "#a3a3a3"
-                        }
-                      />
-                    ))}
-                  </Pie>
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, color: "#737373" }}
-                    iconType="circle"
-                  />
-                  <Tooltip contentStyle={tooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Taxa de resposta por pergunta
-            </h2>
-            <p className="mb-4 text-caption text-mid-gray">
-              Respondidas por completo, &quot;não abordadas&quot; ou sem resposta — por
-              pergunta do roteiro
-            </p>
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={respostaPorPergunta}>
-                  <XAxis
-                    dataKey="nome"
-                    tickLine={false}
-                    axisLine={{ stroke: "#e5e5e5" }}
-                    tick={tickStyle}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    width={28}
-                    tickLine={false}
-                    axisLine={false}
-                    tick={tickStyle}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "#f5f5f5" }}
-                    contentStyle={tooltipStyle}
-                    formatter={(v: number, _n, item) => [
-                      `${v} entrevistas`,
-                      (item?.payload as { texto?: string })?.texto ?? "",
-                    ]}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12, color: "#737373" }} />
-                  <Bar
-                    dataKey="respondidas"
-                    name="Respondidas"
-                    stackId="a"
-                    fill="#0a0a0a"
-                    isAnimationActive={false}
-                  />
-                  <Bar
-                    dataKey="naoAbordadas"
-                    name="Não abordadas"
-                    stackId="a"
-                    fill="#a3a3a3"
-                    isAnimationActive={false}
-                  />
-                  <Bar
-                    dataKey="semResposta"
-                    name="Sem resposta"
-                    stackId="a"
-                    fill="#e5e5e5"
-                    isAnimationActive={false}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <ol className="mt-3 space-y-1 text-caption text-mid-gray">
-              {respostaPorPergunta.map((p, i) => (
-                <li key={p.nome}>
-                  <span className="font-medium text-ink-soft">P{i + 1}:</span>{" "}
-                  {p.texto.length > 90 ? `${p.texto.slice(0, 90)}…` : p.texto}
-                </li>
-              ))}
-            </ol>
-          </Card>
-
-          <Card>
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Funil da validação
-            </h2>
-            <p className="mb-4 text-caption text-mid-gray">
-              Da entrevista realizada até a perda de serviço (confirmação e recusa:
-              % de quem avaliou o problema)
-            </p>
-            <div className="space-y-3">
-              {funil.map((f) => (
-                <div key={f.rotulo}>
-                  <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
-                    <span className="text-ink-soft">{f.rotulo}</span>
-                    <span className="font-semibold text-ink">
-                      {f.valor}{" "}
-                      <span className="text-caption font-normal text-mid-gray">
-                        ({f.perc}%)
-                      </span>
-                    </span>
-                  </div>
-                  <div className="h-3 w-full overflow-hidden rounded-full bg-canvas">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${f.perc}%`, background: f.cor }}
-                    />
-                  </div>
+                      <Legend wrapperStyle={{ fontSize: 12, color: "#737373" }} />
+                      <Bar dataKey="respondidas" name="Respondidas" stackId="a" fill="#0a0a0a" isAnimationActive={false} />
+                      <Bar dataKey="naoAbordadas" name="Não abordadas" stackId="a" fill="#a3a3a3" isAnimationActive={false} />
+                      <Bar dataKey="semResposta" name="Sem resposta" stackId="a" fill="#e5e5e5" isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
-          </Card>
+              </Card>
 
-          <Card className="lg:col-span-2">
-            <h2 className="mb-1 text-sm font-semibold text-ink">
-              Entrevistas + pesquisa online
-            </h2>
-            <p className="mb-4 text-caption text-mid-gray">
-              O que ouvimos nas oficinas, lado a lado com as pesquisas do setor
-            </p>
-            <h3 className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-              Lado a lado
-            </h3>
-            <div className="mt-2 mb-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-sm font-semibold text-ink">Check-in digital</p>
-                <p className="mt-1 text-sm text-ink-soft">
-                  <span className="font-semibold text-ink">
-                    {checkinSistema.chk.digital} de {checkinSistema.baseChk} (
-                    {checkinSistema.baseChk
-                      ? Math.round(
-                          (checkinSistema.chk.digital / checkinSistema.baseChk) *
-                            100,
-                        )
-                      : 0}
-                    %)
-                  </span>{" "}
-                  nas entrevistas · 43% das oficinas (EUA) já usam inspeção
-                  digital — ~1 em 4 ainda faz o check-in à mão
+              <Card className="lg:col-span-2">
+                <h3 className="text-sm font-semibold text-ink">
+                  Entrevistas + pesquisa online
+                </h3>
+                <p className="mb-4 mt-1 text-caption text-mid-gray">
+                  O que ouvimos nas oficinas, lado a lado com as pesquisas do setor
                 </p>
-                <p className="mt-1 text-caption text-mid-gray">
-                  Endeavor/AutoZone · dez/2025 · ALLDATA · 2023
-                </p>
-              </div>
-              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-sm font-semibold text-ink">
-                  Atualização por mensagem
-                </p>
-                <p className="mt-1 text-sm text-ink-soft">
-                  <span className="font-semibold text-ink">
-                    {whatsappCount} de {canalAviso.base} ({percWhatsapp}%)
-                  </span>{" "}
-                  avisam por WhatsApp · 56% dos clientes preferem mensagem — quem
-                  recebe fica +34 pontos mais satisfeito
-                </p>
-                <p className="mt-1 text-caption text-mid-gray">
-                  J.D. Power ASI · abr/2025 · EUA
-                </p>
-              </div>
-              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-sm font-semibold text-ink">
-                  Foto e vídeo do serviço
-                </p>
-                <p className="mt-1 text-sm text-ink-soft">
-                  <span className="font-semibold text-ink">
-                    {fotoVideoCount.total} de {fotoVideoCount.base} ({percFotoVideo}
-                    %)
-                  </span>{" "}
-                  mandam foto/vídeo · foto e vídeo mais que dobram a aprovação do
-                  serviço — 64% dos clientes querem, só 26% recebem
-                </p>
-                <p className="mt-1 text-caption text-mid-gray">
-                  J.D. Power ASI/CSI · 2026 · EUA
-                </p>
-              </div>
-              <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-sm font-semibold text-ink">Aviso automático</p>
-                <p className="mt-1 text-sm text-ink-soft">
-                  <span className="font-semibold text-ink">
-                    0 de {padraoAviso.base} (0%)
-                  </span>{" "}
-                  têm aviso automático · “manter o cliente informado” é 1 dos 4
-                  KPIs de comunicação mais fortes da satisfação
-                </p>
-                <p className="mt-1 text-caption text-mid-gray">
-                  J.D. Power CSI · 2025 · EUA
-                </p>
-              </div>
+                <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {MERCADO.map((m) => (
+                    <li key={m.dado + m.texto} className="rounded-cards border border-hairline bg-surface-alt p-3">
+                      <p className="text-xl font-semibold text-ink">{m.dado}</p>
+                      <p className="mt-1 text-sm text-ink-soft">{m.texto}</p>
+                      <p className="mt-1 text-caption text-mid-gray">{m.fonte}</p>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
             </div>
-            <h3 className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-              Nossas entrevistas · {statsOficina.realizadas} oficinas
-            </h3>
-            <ul className="mt-2 mb-5 space-y-2 text-sm text-ink-soft">
-              <li>
-                <Badge variant="solid">{statsOficina.percIdentificaram}%</Badge> confirmam o
-                problema de prazo/comunicação ({statsOficina.identificaramProblema} de{" "}
-                {statsOficina.avaliaramProblema} que avaliaram)
-              </li>
-              <li>
-                <Badge variant="outline">{percRecusas}%</Badge> já perderam serviço
-                por não entender o prazo ({statsOficina.recusas} de {statsOficina.avaliaramProblema})
-              </li>
-            </ul>
-            <h3 className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-              Pesquisas online do setor
-            </h3>
-            <ul className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {MERCADO.map((m) => (
-                <li
-                  key={m.dado + m.texto}
-                  className="rounded-cards border border-hairline bg-surface-alt p-3"
-                >
-                  <p className="text-xl font-semibold text-ink">{m.dado}</p>
-                  <p className="mt-1 text-sm text-ink-soft">{m.texto}</p>
-                  <p className="mt-1 text-caption text-mid-gray">{m.fonte}</p>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        </div>
+          )}
+        </>
       )}
     </div>
   );

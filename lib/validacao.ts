@@ -1,6 +1,6 @@
 import type { Entrevista, Pergunta, Publico, Rodada } from "./types";
 
-export const META_CLIENTE = 10;
+export const META_CLIENTE = 12;
 
 export const ROTULOS_PUBLICO: Record<
   Publico,
@@ -25,6 +25,10 @@ export const ROTULOS_RODADA: Record<Rodada, string> = {
 
 export function publicoDe(e: Entrevista): Publico {
   return e.publico ?? "oficina";
+}
+
+export function ehExemplo(e: Entrevista): boolean {
+  return e.exemplo === true;
 }
 
 export function publicoDaPergunta(p: Pergunta): Publico {

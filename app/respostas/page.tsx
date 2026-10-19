@@ -6,8 +6,8 @@ import { apiList } from "@/lib/api";
 import { calcStats } from "@/lib/stats";
 import type { Entrevista, Pergunta, Publico } from "@/lib/types";
 import {
+  ehExemplo,
   META_CLIENTE,
-  perguntasDoBloco,
   perguntasDoPublico,
   publicoDe,
   ROTULOS_PUBLICO,
@@ -20,6 +20,24 @@ import {
   PageHeader,
   Select,
 } from "@/components/ui";
+
+function MiniStat({
+  rotulo,
+  valor,
+  detalhe,
+}: {
+  rotulo: string;
+  valor: string;
+  detalhe: string;
+}) {
+  return (
+    <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+      <p className="text-caption text-mid-gray">{rotulo}</p>
+      <p className="mt-1 text-xl font-semibold text-ink">{valor}</p>
+      <p className="mt-1 text-caption text-mid-gray">{detalhe}</p>
+    </div>
+  );
+}
 
 export default function RespostasPage() {
   const [entrevistas, setEntrevistas] = useState<Entrevista[]>([]);
@@ -58,6 +76,7 @@ export default function RespostasPage() {
   );
   const statsOficina = useMemo(() => calcStats(oficina), [oficina]);
   const statsCliente = useMemo(() => calcStats(cliente), [cliente]);
+  const temDemo = useMemo(() => cliente.some(ehExemplo), [cliente]);
 
   const doLado = lado === "oficina" ? oficina : cliente;
   const stats = lado === "oficina" ? statsOficina : statsCliente;
@@ -92,7 +111,7 @@ export default function RespostasPage() {
     <div>
       <PageHeader
         title="Respostas"
-        subtitle="O que a oficina já respondeu e o que ainda falta ouvir do cliente final"
+        subtitle={`O que ${oficina.length} oficinas e ${cliente.length} clientes finais responderam`}
         right={
           lado === "oficina" ? (
             <Select
@@ -132,6 +151,22 @@ export default function RespostasPage() {
         </Button>
       </div>
 
+      {lado === "cliente" && temDemo && (
+        <Card className="mb-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge variant="solid">Demonstração</Badge>
+            <p className="text-sm text-ink-soft">
+              As {cliente.length} respostas do cliente final são{" "}
+              <strong className="font-semibold text-ink">
+                exemplos criados para mostrar como a página fica
+              </strong>
+              . Quando ouvir clientes de verdade, é só cadastrar em Entrevistas
+              e estas podem ser removidas.
+            </p>
+          </div>
+        </Card>
+      )}
+
       <Card className="mb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -150,242 +185,180 @@ export default function RespostasPage() {
         </div>
 
         {lado === "oficina" ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-4">
-            <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-              <p className="text-caption text-mid-gray">Confirmam o problema</p>
-              <p className="mt-1 text-xl font-semibold text-ink">
-                {stats.percIdentificaram}%
-              </p>
-              <p className="mt-1 text-caption text-mid-gray">
-                {stats.identificaramProblema} de {stats.avaliaramProblema}
-              </p>
-            </div>
-            <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-              <p className="text-caption text-mid-gray">
-                Já perderam serviço por prazo
-              </p>
-              <p className="mt-1 text-xl font-semibold text-ink">
-                {stats.recusas}
-              </p>
-              <p className="mt-1 text-caption text-mid-gray">
-                de {stats.avaliaramProblema} que avaliaram
-              </p>
-            </div>
-            <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-              <p className="text-caption text-mid-gray">Cliente entende o prazo</p>
-              <p className="mt-1 text-sm font-semibold text-ink">
-                {stats.porClienteEntendePrazos
-                  .filter((f) => ["sim", "parcial", "nao"].includes(f.faixa))
-                  .map((f) => `${f.faixa}: ${f.total}`)
-                  .join(" · ")}
-              </p>
-              <p className="mt-1 text-caption text-mid-gray">
-                sim · parcial · não
-              </p>
-            </div>
-            <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-              <p className="text-caption text-mid-gray">Aviso ao cliente</p>
-              <p className="mt-1 text-sm font-semibold text-ink">
-                Sem padrão / manual
-              </p>
-              <p className="mt-1 text-caption text-mid-gray">
-                ver detalhes em Gráficos
-              </p>
-            </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <MiniStat
+              rotulo="Confirmam o problema"
+              valor={`${stats.percIdentificaram}%`}
+              detalhe={`${stats.identificaramProblema} de ${stats.avaliaramProblema} que avaliaram`}
+            />
+            <MiniStat
+              rotulo="Já perderam serviço por prazo"
+              valor={`${stats.recusas}`}
+              detalhe={`de ${stats.avaliaramProblema} que avaliaram`}
+            />
+            <MiniStat
+              rotulo="Entrevistas realizadas"
+              valor={`${stats.realizadas}`}
+              detalhe="base de oficina"
+            />
           </div>
         ) : (
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-              <p className="text-caption text-mid-gray">Entrevistas</p>
-              <p className="mt-1 text-xl font-semibold text-ink">
-                {cliente.length}
-              </p>
-              <p className="mt-1 text-caption text-mid-gray">
-                meta: {META_CLIENTE}
-              </p>
-            </div>
-            <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-              <p className="text-caption text-mid-gray">Confirmaram a dor</p>
-              <p className="mt-1 text-xl font-semibold text-ink">
-                {statsCliente.identificaramProblema}
-              </p>
-              <p className="mt-1 text-caption text-mid-gray">
-                de {statsCliente.avaliaramProblema} que avaliaram
-              </p>
-            </div>
-            <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-              <p className="text-caption text-mid-gray">Status</p>
-              <p className="mt-1 text-sm font-semibold text-ink">
-                A iniciar
-              </p>
-              <p className="mt-1 text-caption text-mid-gray">
-                roteiro pronto na página Perguntas
-              </p>
-            </div>
+            <MiniStat
+              rotulo="Entrevistas"
+              valor={`${cliente.length}`}
+              detalhe={`meta: ${META_CLIENTE}`}
+            />
+            <MiniStat
+              rotulo="Confirmaram a falta de informação"
+              valor={`${statsCliente.percIdentificaram}%`}
+              detalhe={`${statsCliente.identificaramProblema} de ${statsCliente.avaliaramProblema}`}
+            />
+            <MiniStat
+              rotulo="Já desistiram ou recusaram"
+              valor={`${statsCliente.recusas}`}
+              detalhe="por atraso ou falta de aviso"
+            />
           </div>
         )}
       </Card>
 
-      <Card className="mb-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-ink">
-              Como ler estas respostas
-            </h2>
-            <p className="mt-1 text-caption text-mid-gray">
-              O que está firme no levantamento e o que ainda precisa de base
-            </p>
-          </div>
-          <Badge variant="soft">Transparência</Badge>
-        </div>
-        <p className="mt-3 text-sm text-ink-soft">
-          <strong className="font-semibold text-ink">64%</strong> confirmam o
-          problema (14 de 22 entrevistas completas de oficina) e{" "}
-          <strong className="font-semibold text-ink">32%</strong> já perderam
-          serviço por prazo (7 de 22).
-        </p>
-        <p className="mt-2 text-sm text-ink-soft">
-          Os números de 91%, 63%, 11% e 36%, e o &quot;5 de 5 usariam uma solução
-          online&quot;, ainda precisam ter a base de cálculo confirmada.
-        </p>
-        <p className="mt-2 text-caption text-mid-gray">
-          As 5 respostas da avaliação estão na página{" "}
-          <Link href="/pitch" className="font-medium text-ink underline">
-            Pitch
-          </Link>
-          . Abaixo estão as respostas de cada entrevista, por lado.
-        </p>
-      </Card>
-
-      {lado === "cliente" && cliente.length === 0 ? (
-        <>
-          <Card className="mb-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-ink">
-                  Ainda não ouvimos o cliente final
-                </h2>
-                <p className="mt-1 text-caption text-mid-gray">
-                  A validação de 26 entrevistas foi feita com donos, gerentes e
-                  mecânicos. Falta ouvir quem recebe o acompanhamento.
-                </p>
-              </div>
-              <Badge variant="outline">Pendente</Badge>
+      {lado === "oficina" && (
+        <Card className="mb-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-ink">
+                Como ler estas respostas
+              </h2>
+              <p className="mt-1 text-caption text-mid-gray">
+                O que está firme no levantamento e o que ainda precisa de base
+              </p>
             </div>
-            <Link
-              href="/entrevistas"
-              className="mt-4 inline-flex h-9 items-center rounded-buttons bg-ink px-3 text-sm font-medium text-[#fafafa] transition-colors hover:bg-ink-soft"
-            >
-              Registrar entrevista com cliente
+            <Badge variant="soft">Transparência</Badge>
+          </div>
+          <p className="mt-3 text-sm text-ink-soft">
+            <strong className="font-semibold text-ink">64%</strong> confirmam o
+            problema (14 de 22 entrevistas completas de oficina) e{" "}
+            <strong className="font-semibold text-ink">32%</strong> já perderam
+            serviço por prazo (7 de 22). Os números de 91%, 63%, 11% e 36%, e o
+            &quot;5 de 5 usariam uma solução online&quot;, ainda precisam ter a
+            base confirmada.
+          </p>
+          <p className="mt-2 text-caption text-mid-gray">
+            As 5 respostas da avaliação estão na página{" "}
+            <Link href="/pitch" className="font-medium text-ink underline">
+              Pitch
             </Link>
-          </Card>
+            . Toque em cada entrevista para abrir as respostas.
+          </p>
+        </Card>
+      )}
 
-          <Card>
-            <h2 className="text-sm font-semibold text-ink">
-              Roteiro do cliente final
-            </h2>
-            <p className="mt-1 text-caption text-mid-gray">
-              {META_CLIENTE} entrevistas curtas, na saída da oficina ou por
-              indicação.
-            </p>
-            {(["problema", "solucao"] as const).map((rodada) => {
-              const bloco = perguntasDoBloco(perguntas, "cliente", rodada);
-              return (
-                <div key={rodada} className="mt-4">
-                  <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-                    {rodada === "problema" ? "Problema" : "Solução"}
-                  </p>
-                  <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-ink-soft marker:text-mid-gray">
-                    {bloco.map((p) => (
-                      <li key={p.id}>{p.texto}</li>
-                    ))}
-                  </ol>
-                </div>
-              );
-            })}
-          </Card>
-        </>
-      ) : visiveis.length === 0 ? (
+      {visiveis.length === 0 ? (
         <EmptyState>Nenhuma entrevista para exibir neste lado.</EmptyState>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {visiveis.map((e) => {
             const respondidas = perguntasDoLado.filter((p) =>
               e.respostas.some(
                 (r) => r.perguntaId === p.id && r.resposta.trim(),
               ),
             );
+            const orfas = e.respostas.filter(
+              (r) =>
+                !perguntasDoLado.some((p) => p.id === r.perguntaId) &&
+                r.resposta.trim(),
+            );
             return (
-              <Card key={e.id}>
-                <div className="border-b border-hairline pb-3">
-                  <p className="text-body font-semibold text-ink">
-                    {e.nomeEntrevistado || "(sem nome)"}{" "}
-                    <span className="font-normal text-mid-gray">
-                      — {e.empresa || "empresa não informada"}
+              <details
+                key={e.id}
+                className="group rounded-cards border border-hairline bg-paper shadow-subtle"
+              >
+                <summary className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-body font-semibold text-ink">
+                      {e.nomeEntrevistado || "(sem nome)"}
+                      {e.empresa ? (
+                        <span className="font-normal text-mid-gray">
+                          {" "}
+                          — {e.empresa}
+                        </span>
+                      ) : null}
                     </span>
-                  </p>
-                  <p className="mt-0.5 text-caption text-mid-gray">
-                    {[e.cargo, e.data || null].filter(Boolean).join(" · ")}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Badge variant="soft">
-                      {publicoDe(e) === "cliente" ? "Cliente final" : "Oficina"}
-                    </Badge>
-                    {(e.responsavel || "").trim() && (
-                      <Badge variant="outline">{e.responsavel}</Badge>
-                    )}
+                    <span className="mt-0.5 block text-caption text-mid-gray">
+                      {[e.cargo, e.data].filter(Boolean).join(" · ")}
+                    </span>
+                  </span>
+                  <span className="hidden flex-wrap items-center gap-2 sm:flex">
+                    {ehExemplo(e) && <Badge variant="soft">Demonstração</Badge>}
                     {e.identificouProblema && (
                       <Badge variant="solid">
-                        {publicoDe(e) === "cliente"
+                        {lado === "cliente"
+                          ? "confirmou a dor"
+                          : "identificou o problema"}
+                      </Badge>
+                    )}
+                    <Badge variant="outline">
+                      {respondidas.length} respostas
+                    </Badge>
+                  </span>
+                  <span
+                    aria-hidden
+                    className="text-lg leading-none text-mid-gray transition-transform group-open:rotate-45"
+                  >
+                    +
+                  </span>
+                </summary>
+
+                <div className="border-t border-hairline px-4 pb-4 pt-3">
+                  <div className="mb-3 flex flex-wrap items-center gap-2 sm:hidden">
+                    {ehExemplo(e) && <Badge variant="soft">Demonstração</Badge>}
+                    {e.identificouProblema && (
+                      <Badge variant="solid">
+                        {lado === "cliente"
                           ? "confirmou a dor"
                           : "identificou o problema"}
                       </Badge>
                     )}
                   </div>
-                </div>
 
-                {respondidas.length === 0 ? (
-                  <p className="mt-3 text-sm text-mid-gray">
-                    Nenhuma resposta registrada para este lado.
-                  </p>
-                ) : (
-                  <div className="mt-3 space-y-3">
-                    {respondidas.map((p, i) => {
-                      const r = e.respostas.find(
-                        (x) => x.perguntaId === p.id,
-                      )?.resposta;
-                      return (
-                        <div key={p.id} className="text-sm">
-                          <p className="font-medium text-ink">
-                            {i + 1}. {p.texto}
-                          </p>
-                          <p className="mt-0.5 text-ink-soft">{r}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                  {respondidas.length === 0 ? (
+                    <p className="text-sm text-mid-gray">
+                      Nenhuma resposta registrada para este lado.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {respondidas.map((p, i) => {
+                        const r = e.respostas.find(
+                          (x) => x.perguntaId === p.id,
+                        )?.resposta;
+                        return (
+                          <div key={p.id} className="text-sm">
+                            <p className="font-medium text-ink">
+                              {i + 1}. {p.texto}
+                            </p>
+                            <p className="mt-0.5 text-ink-soft">{r}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
-                {e.respostas
-                  .filter(
-                    (r) =>
-                      !perguntasDoLado.some((p) => p.id === r.perguntaId) &&
-                      r.resposta.trim(),
-                  )
-                  .map((r) => (
+                  {orfas.map((r) => (
                     <div key={r.perguntaId} className="mt-3 text-sm">
                       <p className="font-medium text-ink">Pergunta removida</p>
                       <p className="mt-0.5 text-ink-soft">{r.resposta}</p>
                     </div>
                   ))}
 
-                {e.anotacoes && (
-                  <div className="mt-3 text-sm">
-                    <p className="font-medium text-ink">Anotações</p>
-                    <p className="mt-0.5 text-ink-soft">{e.anotacoes}</p>
-                  </div>
-                )}
-              </Card>
+                  {e.anotacoes && (
+                    <div className="mt-3 text-sm">
+                      <p className="font-medium text-ink">Anotações</p>
+                      <p className="mt-0.5 text-ink-soft">{e.anotacoes}</p>
+                    </div>
+                  )}
+                </div>
+              </details>
             );
           })}
         </div>

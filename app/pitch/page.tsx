@@ -65,7 +65,8 @@ export default function PitchPage() {
             <strong className="font-semibold text-ink">cliente final</strong>{" "}
             (motorista) não paga nada, não baixa app e não cria conta: só acompanha
             o carro pelo QR code. A validação também tem dois lados — já ouvimos 26
-            oficinas; o cliente final ainda será ouvido com um roteiro próprio.
+            oficinas de verdade; do lado do cliente final temos 12 respostas de
+            exemplo, criadas para mostrar como a página fica.
           </p>
           <p className="mt-3 text-sm text-ink-soft">
             O dono usa o painel para a gestão: vê a fila inteira, o problema
