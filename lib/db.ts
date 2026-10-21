@@ -8,6 +8,7 @@ export const COLLECTIONS = [
   "tarefas",
   "lembretes",
   "descobertas",
+  "oficinas",
 ] as const;
 
 export type Collection = (typeof COLLECTIONS)[number];
@@ -85,6 +86,7 @@ function seedDB(): DB {
     tarefas: seedTarefas(),
     lembretes: seedLembretes(),
     descobertas: seedDescobertas(),
+    oficinas: [],
   };
 }
 
@@ -95,6 +97,7 @@ function normalize(db: Partial<DB>): DB {
     tarefas: db.tarefas ?? [],
     lembretes: db.lembretes ?? [],
     descobertas: db.descobertas ?? [],
+    oficinas: db.oficinas ?? [],
   };
 }
 

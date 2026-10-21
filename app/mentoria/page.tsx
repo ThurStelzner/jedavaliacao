@@ -140,9 +140,9 @@ export default function MentoriaPage() {
           </div>
           <div className="mt-4 rounded-cards border border-hairline bg-canvas p-4">
             <p className="text-sm text-ink-soft">
-              &quot;Oficinas mecânicas perdem tempo porque a gestão é ruim
-              (check-in lento e serviço sem registro), o que causa falta de
-              comunicação com o cliente.&quot;
+              &quot;Oficinas mecânicas perdem tempo porque não têm organização: o
+              check-in é verbal ou no papel, o andamento do serviço fica na cabeça
+              e tarefas simples demoram — e o cliente fica sem informação.&quot;
             </p>
           </div>
           <p className="mt-2 text-caption text-mid-gray">

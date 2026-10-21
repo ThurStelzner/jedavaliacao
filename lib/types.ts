@@ -6,6 +6,14 @@ export type StatusTarefa = "pendente" | "em_andamento" | "concluida";
 export type TipoLembrete = "critico" | "atencao";
 export type ClienteEntendePrazos = "sim" | "parcial" | "nao" | "";
 export type RecusouServico = "sim" | "nao" | "incerto" | "";
+export type CheckinAtual = "papel" | "verbal" | "sistema" | "";
+export type AvisoAtual =
+  | "whatsapp"
+  | "telefone"
+  | "presencial"
+  | "nao_avisa"
+  | "";
+export type AtrasoAtual = "sim" | "as_vezes" | "nao" | "";
 export type TipoDescoberta =
   | "novo_problema"
   | "problema_recorrente"
@@ -47,6 +55,13 @@ export interface Entrevista {
   outroProblema: string;
   clienteEntendePrazos?: ClienteEntendePrazos;
   recusouServico?: RecusouServico;
+  // Classificação das respostas abertas (análise temática da equipe).
+  checkin?: CheckinAtual;
+  aviso?: AvisoAtual;
+  atraso?: AtrasoAtual;
+  software?: "sim" | "nao" | "";
+  cobrouNoticia?: "sim" | "nao" | "";
+  usariaQr?: "sim" | "nao" | "talvez" | "";
   exemplo?: boolean;
   createdAt: string;
 }
@@ -78,10 +93,22 @@ export interface Descoberta {
   createdAt: string;
 }
 
+export interface Oficina {
+  id: string;
+  /** Número público da oficina. Único no sistema. */
+  numero: string;
+  nome: string;
+  /** Token do QR code. Único no sistema. */
+  qrToken: string;
+  ativo: boolean;
+  createdAt: string;
+}
+
 export interface DB {
   entrevistas: Entrevista[];
   perguntas: Pergunta[];
   tarefas: Tarefa[];
   lembretes: Lembrete[];
   descobertas: Descoberta[];
+  oficinas: Oficina[];
 }

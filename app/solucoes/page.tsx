@@ -166,6 +166,14 @@ export default function SolucoesPage() {
             </div>
           ))}
         </div>
+        <p className="mt-3 text-caption text-mid-gray">
+          Cada oficina recebe um número e um QR code exclusivos — dois cadastros
+          nunca compartilham o mesmo código.{" "}
+          <Link href="/oficinas" className="font-medium text-ink underline">
+            Testar o cadastro
+          </Link>
+          .
+        </p>
       </Card>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -2,6 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  Bar,
+  BarChart,
+  LabelList,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { apiList } from "@/lib/api";
 import {
   calcStats,
@@ -49,6 +57,17 @@ export default function DashboardPage() {
   const stats = useMemo(() => calcStats(oficina), [oficina]);
   const passos = useMemo(() => proximosPassos(stats).slice(0, 4), [stats]);
 
+  const checkin = useMemo(() => {
+    const mapa = { verbal: 0, papel: 0, sistema: 0 };
+    for (const e of oficina) {
+      if (e.checkin === "verbal") mapa.verbal += 1;
+      else if (e.checkin === "papel") mapa.papel += 1;
+      else if (e.checkin === "sistema") mapa.sistema += 1;
+    }
+    const base = mapa.verbal + mapa.papel + mapa.sistema;
+    return { ...mapa, base, semRegistro: mapa.verbal + mapa.papel };
+  }, [oficina]);
+
   const tarefasAbertas = tarefas
     .filter((t) => t.status !== "concluida")
     .sort((a, b) => {
@@ -75,8 +94,9 @@ export default function DashboardPage() {
 
       <Card className="mb-4">
         <p className="max-w-4xl text-subheading font-semibold leading-snug text-ink md:text-heading-sm">
-          Oficinas mecânicas perdem tempo porque a gestão é ruim (check-in lento
-          e serviço sem registro), o que causa falta de comunicação com o cliente.
+          Oficinas mecânicas perdem tempo porque não têm organização: o check-in é
+          verbal ou no papel, o andamento do serviço fica na cabeça e tarefas
+          simples demoram — e o cliente fica sem informação.
         </p>
         <p className="mt-2 max-w-3xl text-sm text-mid-gray">
           <Link
@@ -124,6 +144,113 @@ export default function DashboardPage() {
           ouvidos
         </p>
       </Card>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card>
+          <h2 className="text-sm font-semibold text-ink">
+            Da entrevista à confirmação
+          </h2>
+          <p className="mt-1 text-caption text-mid-gray">
+            Base: {stats.realizadas} entrevistas realizadas
+          </p>
+          <div className="mt-4 space-y-3">
+            {[
+              {
+                nome: "Entrevistadas",
+                valor: stats.realizadas,
+                largura: 100,
+              },
+              {
+                nome: "Responderam ao critério",
+                valor: stats.avaliaramProblema,
+                largura:
+                  stats.realizadas > 0
+                    ? Math.round(
+                        (stats.avaliaramProblema / stats.realizadas) * 100,
+                      )
+                    : 0,
+              },
+              {
+                nome: "Confirmam o problema",
+                valor: stats.identificaramProblema,
+                largura:
+                  stats.realizadas > 0
+                    ? Math.round(
+                        (stats.identificaramProblema / stats.realizadas) * 100,
+                      )
+                    : 0,
+              },
+            ].map((etapa) => (
+              <div key={etapa.nome}>
+                <div className="flex items-baseline justify-between gap-2 text-sm">
+                  <span className="text-ink-soft">{etapa.nome}</span>
+                  <span className="font-medium text-ink">{etapa.valor}</span>
+                </div>
+                <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-canvas">
+                  <div
+                    className="h-full rounded-full bg-ink"
+                    style={{ width: `${etapa.largura}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <h2 className="text-sm font-semibold text-ink">
+            Como o check-in é feito
+          </h2>
+          <p className="mt-1 text-caption text-mid-gray">
+            Base: {checkin.base} entrevistas que responderam
+          </p>
+          <div className="mt-3 h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={[
+                  { nome: "Verbal", valor: checkin.verbal },
+                  { nome: "Papel", valor: checkin.papel },
+                  { nome: "Sistema", valor: checkin.sistema },
+                ]}
+                layout="vertical"
+                margin={{ left: 4, right: 24 }}
+              >
+                <XAxis
+                  type="number"
+                  allowDecimals={false}
+                  tick={{ fill: "#737373", fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="nome"
+                  width={80}
+                  tick={{ fill: "#737373", fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Bar
+                  dataKey="valor"
+                  fill="#0a0a0a"
+                  radius={[0, 6, 6, 0]}
+                  barSize={18}
+                >
+                  <LabelList
+                    dataKey="valor"
+                    position="right"
+                    style={{ fill: "#0a0a0a", fontSize: 12, fontWeight: 600 }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="mt-2 text-caption text-mid-gray">
+            {checkin.semRegistro} de {checkin.base} não têm registro formal (verbal
+            ou papel).
+          </p>
+        </Card>
+      </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card>
