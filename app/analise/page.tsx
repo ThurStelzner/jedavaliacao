@@ -135,20 +135,8 @@ export default function AnalisePage() {
     };
   }, [reais]);
 
-  // Cenário de impacto: hipóteses de trabalho que a equipe pode ajustar.
-  const [cenario, setCenario] = useState({
-    veiculosDia: 12,
-    minutosCheckin: 15,
-    reducaoPct: 50,
-    valorHora: 45,
-  });
-  function mudaCenario(chave: keyof typeof cenario, valor: string) {
-    const n = Number(valor.replace(",", "."));
-    setCenario((c) => ({ ...c, [chave]: Number.isFinite(n) && n >= 0 ? n : 0 }));
-  }
-  const horasSemanaCheckin = (cenario.veiculosDia * 5 * cenario.minutosCheckin) / 60;
-  const horasEconomizadas = (horasSemanaCheckin * cenario.reducaoPct) / 100;
-  const valorMes = horasEconomizadas * 4.33 * cenario.valorHora;
+  // Cenário de impacto substituído: nenhum dado novo precisa ser calculado.
+  // Tudo abaixo vem dos campos já preenchidos nas entrevistas (dor.recusasSemEntendimento etc.).
 
   if (carregando) {
     return <PageHeader title="Análise" subtitle="Carregando..." />;
@@ -176,16 +164,13 @@ export default function AnalisePage() {
           O problema em uma frase
         </p>
         <p className="mt-2 max-w-4xl text-subheading font-semibold leading-snug text-ink md:text-heading-sm">
-          Oficinas perdem tempo com check-in lento, falta de comunicação com o
-          cliente e má gestão: o serviço encalha, o cliente fica sem resposta e a
-          oficina perde produtividade.
+          Donos de oficinas perdem tempo e serviço porque o fluxo do trabalho é
+          gerido na cabeça e no papel: o check-in é lento, o andamento não é
+          registrado e o cliente só é informado quando cobra.
         </p>
         <p className="mt-3 max-w-3xl text-body text-mid-gray">
-          A causa é a gestão do dia a dia (check-in e andamento sem padrão); a
-          falta de comunicação é a consequência que o cliente sente. Abaixo estão
-          apenas os números que sustentam essa frase: {stats.realizadas}{" "}
-          entrevistas realizadas, {stats.avaliaramProblema} responderam à pergunta
-          de validação.
+          A gestão improvisada é a causa; a comunicação falha é a consequência. Os
+          números abaixo saem das {stats.realizadas} entrevistas reais.
         </p>
       </Card>
 
@@ -361,34 +346,6 @@ export default function AnalisePage() {
       </div>
 
       {!semDados && (
-        <Card className="mt-4">
-          <h3 className="text-sm font-semibold text-ink">
-            O cliente entende o prazo?
-          </h3>
-          <p className="mt-1 text-caption text-mid-gray">
-            Pergunta feita dentro da entrevista com a oficina · base:{" "}
-            {stats.realizadas}
-          </p>
-          <ul className="mt-4 space-y-2.5">
-            {dadosPrazo.map((d) => (
-              <li key={d.nome} className="flex items-center gap-3 text-sm">
-                <span className="w-32 shrink-0 text-ink-soft">{d.nome}</span>
-                <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-canvas">
-                  <span
-                    className="block h-full rounded-full bg-ink"
-                    style={{ width: `${pct(d.valor, stats.realizadas)}%` }}
-                  />
-                </span>
-                <span className="w-16 shrink-0 text-right text-ink">
-                  {d.valor} ({pct(d.valor, stats.realizadas)}%)
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {!semDados && (
         <Card className="mt-10">
           <h2 className="text-sm font-semibold text-ink">
             Prevalência da dor: quem sente e quanto
@@ -455,97 +412,86 @@ export default function AnalisePage() {
         </Card>
       )}
 
-      <Card className="mt-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold text-ink">
-            Quanto vale resolver? (cálculo de impacto)
-          </h2>
-          <p className="text-caption text-mid-gray">hipóteses ajustáveis</p>
-        </div>
-        <p className="mb-4 mt-1 max-w-3xl text-caption text-mid-gray">
-          Os donos relatam check-in sem padrão (papel, verbal, "de cabeça"). Se o
-          tempo do check-in cair pela metade, quanto a oficina recupera? Ajuste os
-          valores para a sua oficina-alvo.
+      <div className="mt-10">
+        <h2 className="text-heading-sm font-semibold text-ink md:text-heading">
+          O que isso custa na prática
+        </h2>
+        <p className="mb-4 mt-1.5 text-body text-mid-gray">
+          Números tirados das entrevistas — nada estimado por fora.
         </p>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-ink">Veículos por dia</span>
-            <input
-              type="number"
-              min={0}
-              value={cenario.veiculosDia}
-              onChange={(ev) => mudaCenario("veiculosDia", ev.target.value)}
-              className="h-10 w-full rounded-inputs border border-transparent bg-canvas px-2.5 py-2 text-body text-ink outline-none transition-colors focus:border-hairline focus:bg-paper"
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-ink">Minutos por check-in</span>
-            <input
-              type="number"
-              min={0}
-              value={cenario.minutosCheckin}
-              onChange={(ev) => mudaCenario("minutosCheckin", ev.target.value)}
-              className="h-10 w-full rounded-inputs border border-transparent bg-canvas px-2.5 py-2 text-body text-ink outline-none transition-colors focus:border-hairline focus:bg-paper"
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-ink">Redução esperada (%)
-
-            </span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={cenario.reducaoPct}
-              onChange={(ev) => mudaCenario("reducaoPct", ev.target.value)}
-              className="h-10 w-full rounded-inputs border border-transparent bg-canvas px-2.5 py-2 text-body text-ink outline-none transition-colors focus:border-hairline focus:bg-paper"
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium text-ink">Valor da hora (R$)</span>
-            <input
-              type="number"
-              min={0}
-              value={cenario.valorHora}
-              onChange={(ev) => mudaCenario("valorHora", ev.target.value)}
-              className="h-10 w-full rounded-inputs border border-transparent bg-canvas px-2.5 py-2 text-body text-ink outline-none transition-colors focus:border-hairline focus:bg-paper"
-            />
-          </label>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card>
+            <p className="text-caption font-medium uppercase text-mid-gray">
+              Perda de serviço
+            </p>
+            <p className="mt-2 text-heading font-semibold text-ink">
+              {stats.recusas} de {stats.realizadas}
+            </p>
+            <p className="mt-1 text-caption text-mid-gray">
+              oficinas já perderam serviço por prazo (
+              {pct(stats.recusas, stats.realizadas)}%). Uma relatou perder R$ 100
+              num único cliente que desistiu de esperar a peça.
+            </p>
+          </Card>
+          <Card>
+            <p className="text-caption font-medium uppercase text-mid-gray">
+              Tempo do check-in
+            </p>
+            <p className="mt-2 text-heading font-semibold text-ink">
+              Sem padrão
+            </p>
+            <p className="mt-1 text-caption text-mid-gray">
+              Registro no papel, prazo "de cabeça" e mecânico que faz tudo sozinho:
+              os donos relatam perder mais tempo explicando o andamento do que
+              consertando.
+            </p>
+          </Card>
+          <Card>
+            <p className="text-caption font-medium uppercase text-mid-gray">
+              Comunicação com o cliente
+            </p>
+            <p className="mt-2 text-heading font-semibold text-ink">
+              {dor.naoParcial} de {dor.basePrazo}
+            </p>
+            <p className="mt-1 text-caption text-mid-gray">
+              oficinas dizem que o cliente não entende o prazo (
+              {dor.percNaoEntendeParcial}% das que responderam) — e só avisam
+              quando ele cobra.
+            </p>
+          </Card>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption font-medium uppercase text-mid-gray">
-              Check-in hoje
-            </p>
-            <p className="mt-1 text-xl font-semibold text-ink">
-              {Math.round(horasSemanaCheckin * 10) / 10} h/semana
+        <Card className="mt-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-semibold text-ink">Na voz dos donos</h2>
+            <p className="text-caption text-mid-gray">
+              citações das {stats.realizadas} entrevistas
             </p>
           </div>
-          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption font-medium uppercase text-mid-gray">
-              Economia com {cenario.reducaoPct}% de redução
-            </p>
-            <p className="mt-1 text-xl font-semibold text-ink">
-              {Math.round(horasEconomizadas * 10) / 10} h/semana
-            </p>
-          </div>
-          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption font-medium uppercase text-mid-gray">
-              Valor aproximado
-            </p>
-            <p className="mt-1 text-xl font-semibold text-ink">
-              R$ {Math.round(valorMes)}/mês
-            </p>
-          </div>
-        </div>
-        <p className="mt-3 text-caption text-mid-gray">
-          Estimativa para o cálculo de valor (o check-in ainda não foi cronometrado
-          nas entrevistas — vale medir na próxima rodada). Resolver 50% do tempo é
-          o cenário usado como exemplo, não uma meta confirmada.
-        </p>
-      </Card>
+          <ul className="mt-4 space-y-3">
+            {[
+              {
+                fala: "“Você perde mais tempo explicando do que consertando.”",
+                fonte: "Oficina Mecânica do Paulinho",
+              },
+              {
+                fala:
+                  "“Quase metade das recusas de serviço é por causa do tempo de serviço.”",
+                fonte: "AJ União",
+              },
+              {
+                fala: "“Você não avisou, então achei que estava pronto.”",
+                fonte: "Mecânica Weber",
+              },
+            ].map((q) => (
+              <li key={q.fonte} className="border-l-2 border-ink pl-4">
+                <p className="text-body-lg text-ink-soft">{q.fala}</p>
+                <p className="mt-1 text-caption text-mid-gray">{q.fonte}</p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
 
       <details className="group mt-10 rounded-cards border border-hairline bg-paper p-5">
         <summary className="cursor-pointer list-none text-sm font-semibold text-ink">

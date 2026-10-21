@@ -75,12 +75,12 @@ export default function DashboardPage() {
 
       <Card className="mb-4">
         <p className="max-w-4xl text-subheading font-semibold leading-snug text-ink md:text-heading-sm">
-          Oficinas perdem tempo com check-in lento, falta de comunicação com o
-          cliente e má gestão: o serviço encalha, o cliente fica sem resposta e a
-          oficina perde produtividade.
+          Donos de oficinas perdem tempo e serviço porque o fluxo do trabalho é
+          gerido na cabeça e no papel: o check-in é lento, o andamento não é
+          registrado e o cliente só é informado quando cobra.
         </p>
         <p className="mt-2 max-w-3xl text-sm text-mid-gray">
-          A causa é a gestão do dia a dia; a falta de comunicação é a consequência.{" "}
+          A gestão improvisada é a causa; a comunicação falha é a consequência.{" "}
           <Link
             href="/analise"
             className="font-medium text-ink underline underline-offset-2"
