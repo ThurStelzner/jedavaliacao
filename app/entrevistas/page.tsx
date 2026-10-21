@@ -398,8 +398,8 @@ export default function EntrevistasPage() {
             <Field
               label={
                 form.publico === "cliente"
-                  ? "Já desistiu ou recusou serviço por atraso ou falta de aviso?"
-                  : "Já recusou serviço por não entender o prazo?"
+                  ? "Já desistiu ou recusou serviço por prazo ou falta de informação?"
+                  : "Já recusou serviço por prazo ou falta de informação?"
               }
             >
               <Select
