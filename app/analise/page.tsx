@@ -196,7 +196,13 @@ export default function AnalisePage() {
     [reais],
   );
   const clientesSimulados = useMemo(
-    () => entrevistas.filter((e) => e.exemplo && publicoDe(e) === "cliente"),
+    () =>
+      entrevistas.filter(
+        (e) =>
+          e.exemplo &&
+          publicoDe(e) === "cliente" &&
+          e.cobrouNoticia !== undefined,
+      ),
     [entrevistas],
   );
   const stats = useMemo(() => calcStats(oficina), [oficina]);
