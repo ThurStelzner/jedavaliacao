@@ -164,13 +164,11 @@ export default function AnalisePage() {
           O problema em uma frase
         </p>
         <p className="mt-2 max-w-4xl text-subheading font-semibold leading-snug text-ink md:text-heading-sm">
-          Donos de oficinas perdem tempo e serviço porque o fluxo do trabalho é
-          gerido na cabeça e no papel: o check-in é lento, o andamento não é
-          registrado e o cliente só é informado quando cobra.
+          Oficinas mecânicas perdem tempo porque a gestão é ruim (check-in lento
+          e serviço sem registro), o que causa falta de comunicação com o cliente.
         </p>
         <p className="mt-3 max-w-3xl text-body text-mid-gray">
-          A gestão improvisada é a causa; a comunicação falha é a consequência. Os
-          números abaixo saem das {stats.realizadas} entrevistas reais.
+          Os números abaixo saem das {stats.realizadas} entrevistas reais.
         </p>
       </Card>
 

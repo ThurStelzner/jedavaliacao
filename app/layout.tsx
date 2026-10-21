@@ -12,7 +12,7 @@ const geist = Geist({
 export const metadata: Metadata = {
   title: "Jedavaliacao",
   description:
-    "Validação do problema de oficinas mecânicas: fluxo gerido na cabeça e no papel, check-in lento e cliente sem informação sobre o andamento do serviço",
+    "Oficinas mecânicas perdem tempo porque a gestão é ruim (check-in lento e serviço sem registro), o que causa falta de comunicação com o cliente.",
 };
 
 export default function RootLayout({

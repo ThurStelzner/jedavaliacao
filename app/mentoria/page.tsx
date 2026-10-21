@@ -140,12 +140,9 @@ export default function MentoriaPage() {
           </div>
           <div className="mt-4 rounded-cards border border-hairline bg-canvas p-4">
             <p className="text-sm text-ink-soft">
-              &quot;Oficinas mecânicas têm dificuldade para atualizar os clientes
-              sobre o andamento do serviço porque os mecânicos fazem tudo na
-              oficina, ficam sem organização para responder e só avisam quando o
-              cliente cobra, o que resulta em respostas demoradas e cliente perdido
-              sobre a manutenção dos veículos, tendo que cobrar ou ir à oficina
-              antes de o carro ficar pronto.&quot;
+              &quot;Oficinas mecânicas perdem tempo porque a gestão é ruim
+              (check-in lento e serviço sem registro), o que causa falta de
+              comunicação com o cliente.&quot;
             </p>
           </div>
           <p className="mt-2 text-caption text-mid-gray">
