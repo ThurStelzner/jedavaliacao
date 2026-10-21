@@ -69,6 +69,7 @@ export default function EntrevistasPage() {
   const [aberto, setAberto] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [filtroPublico, setFiltroPublico] = useState<"todos" | Publico>("todos");
+  const [mostrarExemplos, setMostrarExemplos] = useState(false);
 
   async function carregar() {
     const [entrevistas, perguntasCarregadas] = await Promise.all([
@@ -150,26 +151,29 @@ export default function EntrevistasPage() {
     setForm((f) => ({ ...f, publico, respostas: [] }));
   }
 
+  const reais = lista.filter((e) => !e.exemplo);
+  const exemplos = lista.length - reais.length;
+  const base = mostrarExemplos ? lista : reais;
   const visiveis =
     filtroPublico === "todos"
-      ? lista
-      : lista.filter((e) => publicoDe(e) === filtroPublico);
+      ? base
+      : base.filter((e) => publicoDe(e) === filtroPublico);
   const perguntasForm = perguntasDoPublico(perguntas, form.publico ?? "oficina");
-  const totalOficina = lista.filter((e) => publicoDe(e) === "oficina").length;
-  const totalCliente = lista.filter((e) => publicoDe(e) === "cliente").length;
+  const totalOficina = reais.filter((e) => publicoDe(e) === "oficina").length;
+  const totalCliente = reais.filter((e) => publicoDe(e) === "cliente").length;
 
   return (
     <div>
       <PageHeader
         title="Entrevistas"
-        subtitle={`${lista.length} entrevista(s) · ${totalOficina} oficina · ${totalCliente} cliente final`}
+        subtitle={`${reais.length} entrevista(s) · ${totalOficina} oficina · ${totalCliente} cliente final`}
         right={<Button onClick={novo}>Nova entrevista</Button>}
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
         {(
           [
-            ["todos", `Todos (${lista.length})`],
+            ["todos", `Todos (${base.length})`],
             ["oficina", `Oficina (${totalOficina})`],
             ["cliente", `Cliente final (${totalCliente})`],
           ] as const
@@ -182,6 +186,16 @@ export default function EntrevistasPage() {
             {rotulo}
           </Button>
         ))}
+        {exemplos > 0 && (
+          <Button
+            variant={mostrarExemplos ? "primary" : "ghost"}
+            onClick={() => setMostrarExemplos((v) => !v)}
+          >
+            {mostrarExemplos
+              ? `Ocultar ${exemplos} exemplos`
+              : `Mostrar ${exemplos} exemplos`}
+          </Button>
+        )}
       </div>
 
       {mostrarForm && (
