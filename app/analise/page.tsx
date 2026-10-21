@@ -113,6 +113,43 @@ export default function AnalisePage() {
     [stats],
   );
 
+  // Análise de prevalência da dor, calculada das entrevistas reais.
+  const dor = useMemo(() => {
+    const responderamPrazo = reais.filter((e) =>
+      Boolean((e.clienteEntendePrazos || "").trim()),
+    );
+    const naoParcial = responderamPrazo.filter(
+      (e) => e.clienteEntendePrazos === "nao" || e.clienteEntendePrazos === "parcial",
+    ).length;
+    const recusas = reais.filter((e) => e.recusouServico === "sim");
+    return {
+      basePrazo: responderamPrazo.length,
+      naoParcial,
+      percNaoEntendeParcial: Math.round(
+        (naoParcial / (responderamPrazo.length || 1)) * 100,
+      ),
+      comRecusa: recusas.length,
+      recusasSemEntendimento: recusas.filter(
+        (e) => e.clienteEntendePrazos === "nao",
+      ).length,
+    };
+  }, [reais]);
+
+  // Cenário de impacto: hipóteses de trabalho que a equipe pode ajustar.
+  const [cenario, setCenario] = useState({
+    veiculosDia: 12,
+    minutosCheckin: 15,
+    reducaoPct: 50,
+    valorHora: 45,
+  });
+  function mudaCenario(chave: keyof typeof cenario, valor: string) {
+    const n = Number(valor.replace(",", "."));
+    setCenario((c) => ({ ...c, [chave]: Number.isFinite(n) && n >= 0 ? n : 0 }));
+  }
+  const horasSemanaCheckin = (cenario.veiculosDia * 5 * cenario.minutosCheckin) / 60;
+  const horasEconomizadas = (horasSemanaCheckin * cenario.reducaoPct) / 100;
+  const valorMes = horasEconomizadas * 4.33 * cenario.valorHora;
+
   if (carregando) {
     return <PageHeader title="Análise" subtitle="Carregando..." />;
   }
@@ -350,6 +387,165 @@ export default function AnalisePage() {
           </ul>
         </Card>
       )}
+
+      {!semDados && (
+        <Card className="mt-10">
+          <h2 className="text-sm font-semibold text-ink">
+            Prevalência da dor: quem sente e quanto
+          </h2>
+          <p className="mb-4 mt-1 text-caption text-mid-gray">
+            Percentuais calculados das entrevistas reais — cada linha mostra a base
+            usada.
+          </p>
+          <div className="space-y-4">
+            {[
+              {
+                nome: "Percebem o problema como real",
+                valor: stats.identificaramProblema,
+                total: stats.realizadas,
+                base: `${stats.realizadas} entrevistas`,
+              },
+              {
+                nome: "Cliente não entende o prazo (não + parcial)",
+                valor: dor.naoParcial,
+                total: dor.basePrazo,
+                base: `${dor.basePrazo} que responderam`,
+              },
+              {
+                nome: "Já perderam serviço por prazo",
+                valor: stats.recusas,
+                total: stats.realizadas,
+                base: `${stats.realizadas} entrevistas`,
+              },
+              {
+                nome: "Apontam outro problema mais relevante",
+                valor: stats.outroProblema,
+                total: stats.realizadas,
+                base: `${stats.realizadas} entrevistas`,
+              },
+            ].map((linha) => (
+              <div key={linha.nome}>
+                <div className="flex items-baseline justify-between gap-2 text-sm">
+                  <span className="text-ink-soft">
+                    {linha.nome}{" "}
+                    <span className="text-caption text-mid-gray">
+                      (base: {linha.base})
+                    </span>
+                  </span>
+                  <span className="font-medium text-ink">
+                    {linha.valor} · {pct(linha.valor, linha.total)}%
+                  </span>
+                </div>
+                <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-canvas">
+                  <div
+                    className="h-full rounded-full bg-ink transition-all"
+                    style={{ width: `${pct(linha.valor, linha.total)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-caption text-mid-gray">
+            Das {dor.comRecusa} oficinas que já perderam serviço por prazo,{" "}
+            {dor.recusasSemEntendimento} também relatam que o cliente não entende
+            o prazo — a dor da comunicação anda junto com a perda de serviço. A
+            dor do lado do cliente final ainda não foi medida: 0 de 10 clientes
+            entrevistados.
+          </p>
+        </Card>
+      )}
+
+      <Card className="mt-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold text-ink">
+            Quanto vale resolver? (cálculo de impacto)
+          </h2>
+          <p className="text-caption text-mid-gray">hipóteses ajustáveis</p>
+        </div>
+        <p className="mb-4 mt-1 max-w-3xl text-caption text-mid-gray">
+          Os donos relatam check-in sem padrão (papel, verbal, "de cabeça"). Se o
+          tempo do check-in cair pela metade, quanto a oficina recupera? Ajuste os
+          valores para a sua oficina-alvo.
+        </p>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-ink">Veículos por dia</span>
+            <input
+              type="number"
+              min={0}
+              value={cenario.veiculosDia}
+              onChange={(ev) => mudaCenario("veiculosDia", ev.target.value)}
+              className="h-10 w-full rounded-inputs border border-transparent bg-canvas px-2.5 py-2 text-body text-ink outline-none transition-colors focus:border-hairline focus:bg-paper"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-ink">Minutos por check-in</span>
+            <input
+              type="number"
+              min={0}
+              value={cenario.minutosCheckin}
+              onChange={(ev) => mudaCenario("minutosCheckin", ev.target.value)}
+              className="h-10 w-full rounded-inputs border border-transparent bg-canvas px-2.5 py-2 text-body text-ink outline-none transition-colors focus:border-hairline focus:bg-paper"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-ink">Redução esperada (%)
+
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={cenario.reducaoPct}
+              onChange={(ev) => mudaCenario("reducaoPct", ev.target.value)}
+              className="h-10 w-full rounded-inputs border border-transparent bg-canvas px-2.5 py-2 text-body text-ink outline-none transition-colors focus:border-hairline focus:bg-paper"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium text-ink">Valor da hora (R$)</span>
+            <input
+              type="number"
+              min={0}
+              value={cenario.valorHora}
+              onChange={(ev) => mudaCenario("valorHora", ev.target.value)}
+              className="h-10 w-full rounded-inputs border border-transparent bg-canvas px-2.5 py-2 text-body text-ink outline-none transition-colors focus:border-hairline focus:bg-paper"
+            />
+          </label>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-caption font-medium uppercase text-mid-gray">
+              Check-in hoje
+            </p>
+            <p className="mt-1 text-xl font-semibold text-ink">
+              {Math.round(horasSemanaCheckin * 10) / 10} h/semana
+            </p>
+          </div>
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-caption font-medium uppercase text-mid-gray">
+              Economia com {cenario.reducaoPct}% de redução
+            </p>
+            <p className="mt-1 text-xl font-semibold text-ink">
+              {Math.round(horasEconomizadas * 10) / 10} h/semana
+            </p>
+          </div>
+          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
+            <p className="text-caption font-medium uppercase text-mid-gray">
+              Valor aproximado
+            </p>
+            <p className="mt-1 text-xl font-semibold text-ink">
+              R$ {Math.round(valorMes)}/mês
+            </p>
+          </div>
+        </div>
+        <p className="mt-3 text-caption text-mid-gray">
+          Estimativa para o cálculo de valor (o check-in ainda não foi cronometrado
+          nas entrevistas — vale medir na próxima rodada). Resolver 50% do tempo é
+          o cenário usado como exemplo, não uma meta confirmada.
+        </p>
+      </Card>
 
       <details className="group mt-10 rounded-cards border border-hairline bg-paper p-5">
         <summary className="cursor-pointer list-none text-sm font-semibold text-ink">
