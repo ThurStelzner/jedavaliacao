@@ -196,7 +196,7 @@ export default function SolucoesPage() {
             <li>O check-in deixa de viver na cabeça e no papel.</li>
             <li>O dono sabe o problema de cada carro sem procurar.</li>
             <li>O cliente para de ligar sem resposta.</li>
-            <li>O atraso é avisado com o motivo, não com silêncio.</li>
+            <li>O cliente é avisado do andamento, não fica no silêncio.</li>
             <li>Menos serviço perdido por demora sem informação.</li>
           </ul>
         </Card>
@@ -208,7 +208,7 @@ export default function SolucoesPage() {
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-ink-soft marker:text-mid-gray">
             <li>Não é um ERP completo.</li>
             <li>Não substitui sistema fiscal, financeiro ou de estoque.</li>
-            <li>Não promete acabar com os atrasos; promete organizar e informar.</li>
+            <li>Não promete acabar com imprevistos; promete organizar e informar.</li>
             <li>Pode conviver com o programa que a oficina já tem.</li>
           </ul>
         </Card>

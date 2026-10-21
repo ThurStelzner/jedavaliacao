@@ -209,7 +209,8 @@ export default function ConcorrentesPage() {
           <p className="mt-2 text-sm text-ink-soft">
             O que está firme: <strong className="font-semibold text-ink">64%</strong>{" "}
             confirmam o problema e <strong className="font-semibold text-ink">32%</strong>{" "}
-            já perderam serviço por prazo, sobre as 22 entrevistas completas.
+            já perderam serviço por prazo ou falta de informação, sobre as 22
+            entrevistas completas.
           </p>
           <p className="mt-3 text-caption text-mid-gray">
             Preço e plano de entrada em{" "}

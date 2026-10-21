@@ -62,10 +62,10 @@ const ROTULOS_AVISO: Record<string, string> = {
   nao_avisa: "Não avisa",
 };
 
-const ROTULOS_ATRASO: Record<string, string> = {
-  sim: "Acontece",
-  as_vezes: "Às vezes",
-  nao: "Não acontece",
+const ROTULOS_QUEM: Record<string, string> = {
+  dono: "O próprio dono",
+  equipe: "Equipe / recepção",
+  ninguem: "Ninguém",
 };
 
 const ROTULOS_SOFTWARE: Record<string, string> = {
@@ -85,7 +85,7 @@ const pct = (parte: number, total: number) =>
 
 function contar(
   itens: Entrevista[],
-  campo: "checkin" | "aviso" | "atraso" | "software",
+  campo: "checkin" | "aviso" | "quemAvisa" | "software",
   ordem: string[],
   rotulos: Record<string, string>,
 ) {
@@ -100,6 +100,7 @@ function contar(
   return {
     base,
     dados: ordem.map((k) => ({ nome: rotulos[k] ?? k, valor: mapa.get(k) ?? 0 })),
+    semRegistro: (mapa.get("verbal") ?? 0) + (mapa.get("papel") ?? 0),
   };
 }
 
@@ -214,29 +215,29 @@ export default function AnalisePage() {
         nome: "Não confirmam",
         valor: Math.max(stats.avaliaramProblema - stats.identificaramProblema, 0),
       },
-      {
-        nome: "Não responderam",
-        valor: Math.max(stats.realizadas - stats.avaliaramProblema, 0),
-      },
     ],
     [stats],
   );
 
   const dadosRecusa = useMemo(
     () =>
-      stats.porRecusa.map((d) => ({
-        nome: ROTULOS_RECUSA[d.faixa] ?? d.faixa,
-        valor: d.total,
-      })),
+      stats.porRecusa
+        .filter((d) => ["sim", "nao", "incerto"].includes(d.faixa))
+        .map((d) => ({
+          nome: ROTULOS_RECUSA[d.faixa] ?? d.faixa,
+          valor: d.total,
+        })),
     [stats],
   );
 
   const dadosPrazo = useMemo(
     () =>
-      stats.porClienteEntendePrazos.map((d) => ({
-        nome: ROTULOS_PRAZO[d.faixa] ?? d.faixa,
-        valor: d.total,
-      })),
+      stats.porClienteEntendePrazos
+        .filter((d) => ["sim", "parcial", "nao"].includes(d.faixa))
+        .map((d) => ({
+          nome: ROTULOS_PRAZO[d.faixa] ?? d.faixa,
+          valor: d.total,
+        })),
     [stats],
   );
 
@@ -262,9 +263,14 @@ export default function AnalisePage() {
     [oficina],
   );
 
-  const atraso = useMemo(
+  const quemAvisa = useMemo(
     () =>
-      contar(oficina, "atraso", ["sim", "as_vezes", "nao"], ROTULOS_ATRASO),
+      contar(
+        oficina,
+        "quemAvisa",
+        ["dono", "equipe", "ninguem"],
+        ROTULOS_QUEM,
+      ),
     [oficina],
   );
 
@@ -328,14 +334,6 @@ export default function AnalisePage() {
     };
   }, [reais]);
 
-  const atrasoRotina = useMemo(
-    () =>
-      atraso.dados
-        .filter((d) => d.nome === "Acontece" || d.nome === "Às vezes")
-        .reduce((acc, d) => acc + d.valor, 0),
-    [atraso],
-  );
-
   const sim = useMemo(() => {
     const total = clientesSimulados.length;
     return {
@@ -359,7 +357,7 @@ export default function AnalisePage() {
   const semDados = stats.realizadas === 0;
   const faltamEntrevistas = Math.max(META_ENTREVISTAS - stats.realizadas, 0);
   const faltamPontos = Math.max(META_PERC_PROBLEMA - stats.percIdentificaram, 0);
-  const percRecusa = pct(stats.recusas, stats.realizadas);
+  const percRecusa = pct(stats.recusas, stats.avaliaramProblema);
 
   return (
     <div>
@@ -379,8 +377,8 @@ export default function AnalisePage() {
         </p>
         <p className="mt-2 max-w-4xl text-subheading font-semibold leading-snug text-ink md:text-heading-sm">
           Oficinas mecânicas perdem tempo porque não têm organização: o check-in é
-          verbal ou no papel, o andamento do serviço fica na cabeça e tarefas
-          simples demoram — e o cliente fica sem informação.
+          verbal ou no papel, o andamento do serviço fica na cabeça e o cliente só
+          é avisado quando cobra.
         </p>
         <p className="mt-3 max-w-3xl text-body text-mid-gray">
           Os números abaixo saem das {stats.realizadas} entrevistas reais com
@@ -401,16 +399,23 @@ export default function AnalisePage() {
           </li>
           <li>
             <span className="font-medium text-ink">
-              {atrasoRotina} de {atraso.base} relatam atraso
+              {checkin.semRegistro} de {checkin.base} não têm registro formal
             </span>{" "}
-            ({pct(atrasoRotina, atraso.base)}%) — não é exceção, é rotina.
+            do check-in:{" "}
+            {checkin.dados.find((d) => d.nome === ROTULOS_CHECKIN.verbal)?.valor ?? 0}{" "}
+            fazem verbal e{" "}
+            {checkin.dados.find((d) => d.nome === ROTULOS_CHECKIN.papel)?.valor ?? 0}{" "}
+            usam papel. Só{" "}
+            {checkin.dados.find((d) => d.nome === ROTULOS_CHECKIN.sistema)?.valor ?? 0}{" "}
+            usa sistema.
           </li>
           <li>
             <span className="font-medium text-ink">
-              {checkin.dados.find((d) => d.nome === ROTULOS_CHECKIN.verbal)?.valor ?? 0}{" "}
-              de {checkin.base} não têm registro formal
+              {quemAvisa.dados.find((d) => d.nome === ROTULOS_QUEM.dono)?.valor ?? 0}{" "}
+              de {quemAvisa.base} relatos
             </span>{" "}
-            do check-in: fazem verbal ou no papel.
+            dizem que é o próprio dono quem avisa — muitas vezes entre um serviço e
+            outro.
           </li>
           <li>
             <span className="font-medium text-ink">
@@ -436,10 +441,10 @@ export default function AnalisePage() {
         />
         <Stat label="Confirmam o problema" value={`${stats.percIdentificaram}%`} />
         <Stat
-          label="Relatam atraso"
-          value={`${pct(atrasoRotina, atraso.base)}%`}
+          label="Sem registro formal"
+          value={`${checkin.semRegistro}/${checkin.base}`}
         />
-        <Stat label="Perderam serviço por prazo" value={String(stats.recusas)} />
+        <Stat label="Perderam serviço" value={String(stats.recusas)} />
       </div>
 
       <Card className="mt-4">
@@ -511,7 +516,7 @@ export default function AnalisePage() {
 
       <div className="mt-10">
         <h2 className="text-heading-sm font-semibold text-ink md:text-heading">
-          Como a oficina trabalha hoje
+          A causa: falta de organização
         </h2>
         <p className="mb-4 mt-1.5 text-body text-mid-gray">
           A causa da definição, medida nas respostas abertas. Classificação feita
@@ -526,19 +531,19 @@ export default function AnalisePage() {
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             <BlocoGrafico
-              titulo="O atraso acontece?"
-              base={`Base: ${atraso.base} entrevistas que responderam`}
-              nota={`${atrasoRotina} de ${atraso.base} relatam atraso (${pct(atrasoRotina, atraso.base)}%).`}
-            >
-              <GraficoBarras dados={atraso.dados} />
-            </BlocoGrafico>
-
-            <BlocoGrafico
               titulo="Como o check-in é registrado?"
               base={`Base: ${checkin.base} entrevistas que responderam · ${Math.max(stats.realizadas - checkin.base, 0)} não informaram`}
               nota={`${checkin.dados.find((d) => d.nome === ROTULOS_CHECKIN.verbal)?.valor ?? 0} fazem verbal, ${checkin.dados.find((d) => d.nome === ROTULOS_CHECKIN.papel)?.valor ?? 0} no papel e ${checkin.dados.find((d) => d.nome === ROTULOS_CHECKIN.sistema)?.valor ?? 0} em sistema.`}
             >
               <GraficoBarras dados={checkin.dados} />
+            </BlocoGrafico>
+
+            <BlocoGrafico
+              titulo="Quem avisa o cliente?"
+              base={`Base: ${quemAvisa.base} relatos que descrevem quem avisa`}
+              nota={`Em ${quemAvisa.dados.find((d) => d.nome === ROTULOS_QUEM.dono)?.valor ?? 0} de ${quemAvisa.base}, é o próprio dono — muitas vezes entre um serviço e outro.`}
+            >
+              <GraficoBarras dados={quemAvisa.dados} />
             </BlocoGrafico>
 
             <BlocoGrafico
@@ -562,7 +567,7 @@ export default function AnalisePage() {
 
       <div className="mt-10">
         <h2 className="text-heading-sm font-semibold text-ink md:text-heading">
-          A dor que o cliente sente
+          O efeito no cliente
         </h2>
         <p className="mb-4 mt-1.5 text-body text-mid-gray">
           Cada gráfico mostra a base — nada de percentual solto.
@@ -612,15 +617,15 @@ export default function AnalisePage() {
 
             <BlocoGrafico
               titulo="O cliente entende o prazo?"
-              base={`Base: ${stats.realizadas} entrevistas`}
+              base={`Base: ${stats.avaliaramProblema} entrevistas que responderam`}
               nota={`${dor.naoParcial} de ${dor.basePrazo} dizem que o cliente não entende ou entende só em parte (${dor.percNaoEntendeParcial}%).`}
             >
               <GraficoBarras dados={dadosPrazo} />
             </BlocoGrafico>
 
             <BlocoGrafico
-              titulo="Já perdeu serviço por causa do prazo?"
-              base={`Base: ${stats.realizadas} entrevistas`}
+              titulo="Já perdeu serviço por prazo ou falta de informação?"
+              base={`Base: ${stats.avaliaramProblema} entrevistas que responderam`}
               nota={`${stats.recusas} já perderam serviço (${percRecusa}%).`}
             >
               <GraficoBarras dados={dadosRecusa} />
@@ -807,7 +812,12 @@ export default function AnalisePage() {
             baixa frequência · baixo impacto
           </span>
           {[
-            { nome: "Atraso é rotina", freq: 95, impacto: 3, base: "21/22" },
+            {
+              nome: "Check-in sem registro",
+              freq: 96,
+              impacto: 5,
+              base: "22/23",
+            },
             {
               nome: "Cliente sem informação",
               freq: 73,
@@ -834,9 +844,9 @@ export default function AnalisePage() {
           ))}
         </div>
         <p className="mt-3 text-caption text-mid-gray">
-          Prioridade: perda de serviço (impacto 5) e cliente sem informação
-          (frequência 73%). O atraso é o sintoma que aparece em quase toda
-          entrevista, mas atacar só ele não resolve o registro.
+          Prioridade: registrar o check-in (96% sem registro formal). É a causa que
+          alimenta as outras duas: sem registro, o cliente não é avisado e o
+          serviço se perde.
         </p>
       </Card>
 
@@ -856,8 +866,9 @@ export default function AnalisePage() {
               {stats.recusas} de {stats.realizadas}
             </p>
             <p className="mt-1 text-caption text-mid-gray">
-              oficinas já perderam serviço por prazo ({percRecusa}%). Uma relatou
-              perder R$ 100 num único cliente que desistiu de esperar a peça.
+              oficinas já perderam serviço por prazo ou falta de informação (
+              {percRecusa}%). Uma relatou perder R$ 100 num único cliente que
+              desistiu de esperar a peça.
             </p>
           </Card>
           <Card>
@@ -900,9 +911,8 @@ export default function AnalisePage() {
                 fonte: "Oficina Mecânica do Paulinho",
               },
               {
-                fala:
-                  "“Quase metade das recusas de serviço é por causa do tempo de serviço.”",
-                fonte: "AJ União",
+                fala: "“Não tem recepcionista: é ele no telefone e na graxa.”",
+                fonte: "Oficina do Joãozinho",
               },
               {
                 fala: "“Você não avisou, então achei que estava pronto.”",
@@ -976,7 +986,7 @@ export default function AnalisePage() {
           <li>
             <span className="font-medium text-ink">MOTOR (ago/2026):</span> 71% usam
             sistema de gestão e 35% têm portal/app, mas 85% apontam o cliente que
-            não responde como maior desafio e 71% sofrem com atraso na aprovação.
+            não responde como maior desafio e 71% sofrem com demora na aprovação.
           </li>
           <li>
             <span className="font-medium text-ink">Leitura para nós:</span> ter
@@ -995,12 +1005,12 @@ export default function AnalisePage() {
           {[
             {
               pergunta: "“Gestão ruim é vago.”",
-              resposta: `A definição não para no adjetivo: ${checkin.dados.find((d) => d.nome === ROTULOS_CHECKIN.verbal)?.valor ?? 0} de ${checkin.base} não registram o check-in e ${checkin.dados.find((d) => d.nome === ROTULOS_CHECKIN.papel)?.valor ?? 0} usam papel; ${aviso.dados[0]?.valor ?? 0} avisam por WhatsApp e ${aviso.dados[1]?.valor ?? 0} por telefone, sempre manual.`,
+              resposta: `A definição não para no adjetivo: ${checkin.semRegistro} de ${checkin.base} não têm registro formal do check-in (${checkin.dados.find((d) => d.nome === ROTULOS_CHECKIN.verbal)?.valor ?? 0} verbal, ${checkin.dados.find((d) => d.nome === ROTULOS_CHECKIN.papel)?.valor ?? 0} papel) e ${aviso.base} relatos descrevem aviso manual — nenhum automático.`,
             },
             {
               pergunta: "“Quanto tempo eles perdem?”",
               resposta:
-                "Ainda não cronometramos. É a próxima medição: tempo de check-in em 5 oficinas, antes e depois. Sem isso, “perde tempo” fica qualitativo — mas é sustentado por 21 de 22 relatos de atraso.",
+                "Ainda não cronometramos. É a próxima medição: tempo de check-in em 5 oficinas, antes e depois. Sem isso, “perde tempo” fica qualitativo — mas é sustentado por 22 de 23 sem registro formal e 19 de 19 avisos manuais.",
             },
             {
               pergunta: "“Por que a oficina pagaria?”",

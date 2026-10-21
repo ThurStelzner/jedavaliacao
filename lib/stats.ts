@@ -5,7 +5,7 @@ export const META_ENTREVISTAS = 20;
 // Limiar de validação: maioria qualificada das oficinas que avaliaram confirmando
 // o problema. Os percentuais de aprovação/negação consideram as entrevistas que
 // responderam os campos de validação; as demais aparecem como "Não avaliaram".
-// Dados do setor (J.D. Power 2025/2026) reforçam que atrasos são comuns.
+// A dor central é a desorganização do check-in e do aviso ao cliente.
 export const META_PERC_PROBLEMA = 60;
 
 export interface Stats {
@@ -115,8 +115,10 @@ export function calcStats(entrevistas: Entrevista[]): Stats {
     identificaramProblema: identificaram.length,
     percIdentificaram,
     outroProblema: comOutro.length,
-    percOutroProblema: avaliaram.length
-      ? Math.round((comOutro.length / totalAvaliaram) * 100)
+    // "Outro problema" é uma observação da equipe registrada em toda entrevista
+    // realizada, não uma resposta do critério de validação.
+    percOutroProblema: realizadas.length
+      ? Math.round((comOutro.length / realizadas.length) * 100)
       : 0,
     indicacoes,
     percMeta: Math.min(Math.round((realizadas.length / META_ENTREVISTAS) * 100), 100),
@@ -157,7 +159,7 @@ export function proximosPassos(s: Stats): string[] {
   }
   if (s.realizadas > 0) {
     passos.push("Registrar e revisar as respostas das entrevistas realizadas.");
-    passos.push("Cruzar os relatos com a espinha de peixe (causas do atraso).");
+    passos.push("Cruzar os relatos com a espinha de peixe (causas da desorganização).");
   }
   if (s.realizadas >= 3) {
     passos.push(
@@ -166,7 +168,7 @@ export function proximosPassos(s: Stats): string[] {
   }
   if (s.recusas > 0) {
     passos.push(
-      `Destacar as ${s.recusas} recusas de serviço por prazo na apresentação (evidência forte).`,
+      `Destacar as ${s.recusas} recusas de serviço por prazo ou falta de informação na apresentação (evidência forte).`,
     );
   }
   if (s.outroProblema > 0) {

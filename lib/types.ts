@@ -14,6 +14,7 @@ export type AvisoAtual =
   | "nao_avisa"
   | "";
 export type AtrasoAtual = "sim" | "as_vezes" | "nao" | "";
+export type QuemAvisa = "dono" | "equipe" | "ninguem" | "";
 export type TipoDescoberta =
   | "novo_problema"
   | "problema_recorrente"
@@ -59,6 +60,7 @@ export interface Entrevista {
   checkin?: CheckinAtual;
   aviso?: AvisoAtual;
   atraso?: AtrasoAtual;
+  quemAvisa?: QuemAvisa;
   software?: "sim" | "nao" | "";
   cobrouNoticia?: "sim" | "nao" | "";
   usariaQr?: "sim" | "nao" | "talvez" | "";

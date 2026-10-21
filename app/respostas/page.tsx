@@ -174,9 +174,9 @@ export default function RespostasPage() {
               detalhe={`${stats.identificaramProblema} de ${stats.avaliaramProblema} que avaliaram`}
             />
             <MiniStat
-              rotulo="Já perderam serviço por prazo"
+              rotulo="Já perderam serviço"
               valor={`${stats.recusas}`}
-              detalhe={`de ${stats.avaliaramProblema} que avaliaram`}
+              detalhe={`por prazo ou falta de informação · de ${stats.avaliaramProblema} que avaliaram`}
             />
             <MiniStat
               rotulo="Entrevistas realizadas"
@@ -199,7 +199,7 @@ export default function RespostasPage() {
             <MiniStat
               rotulo="Já desistiram ou recusaram"
               valor={`${statsCliente.recusas}`}
-              detalhe="por atraso ou falta de aviso"
+              detalhe="por falta de informação ou aviso"
             />
           </div>
         )}
@@ -222,9 +222,9 @@ export default function RespostasPage() {
             <strong className="font-semibold text-ink">64%</strong> confirmam o
             problema (14 de 22 entrevistas completas de oficina) e{" "}
             <strong className="font-semibold text-ink">32%</strong> já perderam
-            serviço por prazo (7 de 22). Os números de 91%, 63%, 11% e 36%, e o
-            &quot;5 de 5 usariam uma solução online&quot;, ainda precisam ter a
-            base confirmada.
+            serviço por prazo ou falta de informação (7 de 22). Os números de 91%,
+            63%, 11% e 36%, e o &quot;5 de 5 usariam uma solução online&quot;, ainda
+            precisam ter a base confirmada.
           </p>
           <p className="mt-2 text-caption text-mid-gray">
             As 5 respostas da avaliação estão na página{" "}

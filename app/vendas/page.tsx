@@ -125,7 +125,7 @@ export default function VendasPage() {
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-ink-soft marker:text-mid-gray">
             <li>
               <strong className="font-semibold text-ink">7 das 22</strong> oficinas
-              entrevistadas já perderam serviço por causa de prazo.
+              entrevistadas já perderam serviço por prazo ou falta de informação.
             </li>
             <li>
               Uma delas perdeu <strong className="font-semibold text-ink">R$ 100</strong>{" "}
@@ -226,7 +226,8 @@ export default function VendasPage() {
             <li>
               O que está firme: <strong className="font-semibold text-ink">64%</strong>{" "}
               confirmam o problema e <strong className="font-semibold text-ink">32%</strong>{" "}
-              já perderam serviço por prazo, sobre as 22 entrevistas completas.
+              já perderam serviço por prazo ou falta de informação, sobre as 22
+              entrevistas completas.
             </li>
             <li>
               O preço de R$ 99 e o custo de R$ 25 a R$ 40 por oficina serão testados

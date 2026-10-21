@@ -95,8 +95,8 @@ export default function DashboardPage() {
       <Card className="mb-4">
         <p className="max-w-4xl text-subheading font-semibold leading-snug text-ink md:text-heading-sm">
           Oficinas mecânicas perdem tempo porque não têm organização: o check-in é
-          verbal ou no papel, o andamento do serviço fica na cabeça e tarefas
-          simples demoram — e o cliente fica sem informação.
+          verbal ou no papel, o andamento do serviço fica na cabeça e o cliente só
+          é avisado quando cobra.
         </p>
         <p className="mt-2 max-w-3xl text-sm text-mid-gray">
           <Link
@@ -118,7 +118,7 @@ export default function DashboardPage() {
           label="Confirmam o problema"
           value={`${stats.percIdentificaram}%`}
         />
-        <Stat label="Perderam serviço por prazo" value={String(stats.recusas)} />
+        <Stat label="Perderam serviço" value={String(stats.recusas)} />
         <Stat label="Tarefas abertas" value={String(tarefasAbertas.length)} />
       </div>
 

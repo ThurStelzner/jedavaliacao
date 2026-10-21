@@ -12,7 +12,7 @@ const geist = Geist({
 export const metadata: Metadata = {
   title: "Jedavaliacao",
   description:
-    "Oficinas mecânicas perdem tempo porque não têm organização: o check-in é verbal ou no papel, o andamento do serviço fica na cabeça e tarefas simples demoram — e o cliente fica sem informação.",
+    "Oficinas mecânicas perdem tempo porque não têm organização: o check-in é verbal ou no papel, o andamento do serviço fica na cabeça e o cliente só é avisado quando cobra.",
 };
 
 export default function RootLayout({

@@ -113,7 +113,7 @@ export default function MentoriaPage() {
               Organização (causa) → comunicação (consequência).
             </span>{" "}
             O cliente cobrando no WhatsApp é o sintoma que mais dói: 7 oficinas já
-            perderam serviço por prazo (32% de quem avaliou).
+            perderam serviço por prazo ou falta de informação (32% de quem avaliou).
           </p>
           <div className="mt-4 rounded-cards border border-hairline bg-canvas p-4">
             <p className="text-sm text-ink-soft">
@@ -142,7 +142,7 @@ export default function MentoriaPage() {
             <p className="text-sm text-ink-soft">
               &quot;Oficinas mecânicas perdem tempo porque não têm organização: o
               check-in é verbal ou no papel, o andamento do serviço fica na cabeça
-              e tarefas simples demoram — e o cliente fica sem informação.&quot;
+              e o cliente só é avisado quando cobra.&quot;
             </p>
           </div>
           <p className="mt-2 text-caption text-mid-gray">
@@ -162,7 +162,8 @@ export default function MentoriaPage() {
             </li>
             <li>
               Evidências firmes: 64% confirmam o problema (14 de 22 que avaliaram);
-              7 recusas de serviço por prazo (32%).
+              22 de 23 sem registro formal do check-in; 7 recusas de serviço por
+              prazo ou falta de informação (32%).
             </li>
             <li>
               Os números de 91%, 63%, 11% e 36%, e o &quot;5 de 5 usariam uma

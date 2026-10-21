@@ -124,10 +124,12 @@ export default function PitchPage() {
             provar valor, e R$ 99 é o preço que dá lucro.
           </p>
           <p className="mt-3 text-sm text-ink-soft">
-            Do lado do ganho, <strong className="font-semibold text-ink">7 das 22
-            oficinas</strong> entrevistadas já perderam serviço por causa de prazo.
-            Uma delas perdeu R$ 100 em uma peça comprada que o cliente não quis
-            esperar. R$ 100 é quase dois meses de mensalidade.
+            Do lado do ganho, <strong className="font-semibold text-ink">22 das 23
+            oficinas</strong> não têm registro formal do check-in e{" "}
+            <strong className="font-semibold text-ink">7 das 22</strong> já perderam
+            serviço por prazo ou falta de informação. Uma delas perdeu R$ 100 em uma
+            peça comprada que o cliente não quis esperar. R$ 100 é quase dois meses
+            de mensalidade.
           </p>
           <p className="mt-3 rounded-inputs bg-canvas px-3 py-2 text-caption text-mid-gray">
             Os preços dos concorrentes e as perdas são fatos que ouvimos; o custo
@@ -277,7 +279,8 @@ export default function PitchPage() {
             O que está firme no nosso levantamento é que{" "}
             <strong className="font-semibold text-ink">64% confirmam o problema</strong>{" "}
             e <strong className="font-semibold text-ink">32% já perderam serviço por
-            prazo</strong>, ambos sobre as 22 entrevistas completas.
+            prazo ou falta de informação</strong>, ambos sobre as 22 entrevistas
+            completas.
           </p>
           <p className="mt-2 text-sm text-ink-soft">
             Falta ouvir o <strong className="font-semibold text-ink">cliente
