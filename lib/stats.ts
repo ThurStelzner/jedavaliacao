@@ -56,9 +56,12 @@ function avaliouProblema(e: Entrevista): boolean {
 }
 
 export function calcStats(entrevistas: Entrevista[]): Stats {
-  const realizadas = entrevistas.filter((e) => e.status === "realizada");
-  const agendadas = entrevistas.filter((e) => e.status === "agendada");
-  const planejadas = entrevistas.filter((e) => e.status === "planejada");
+  // Entrevistas de demonstração (exemplo: true) não entram em nenhum número:
+  // elas existem só para visualizar o layout em uma base vazia.
+  const base = entrevistas.filter((e) => !e.exemplo);
+  const realizadas = base.filter((e) => e.status === "realizada");
+  const agendadas = base.filter((e) => e.status === "agendada");
+  const planejadas = base.filter((e) => e.status === "planejada");
 
   const empresas = new Set(
     realizadas.map((e) => e.empresa.trim().toLowerCase()).filter(Boolean),
@@ -78,12 +81,12 @@ export function calcStats(entrevistas: Entrevista[]): Stats {
   );
 
   const statusCount = new Map<string, number>();
-  for (const e of entrevistas) {
+  for (const e of base) {
     statusCount.set(e.status, (statusCount.get(e.status) ?? 0) + 1);
   }
 
   const porteCount = new Map<string, number>();
-  for (const e of entrevistas) {
+  for (const e of base) {
     const p = e.porte || "Não informado";
     porteCount.set(p, (porteCount.get(p) ?? 0) + 1);
   }
@@ -102,7 +105,7 @@ export function calcStats(entrevistas: Entrevista[]): Stats {
     : 0;
 
   return {
-    total: entrevistas.length,
+    total: base.length,
     realizadas: realizadas.length,
     agendadas: agendadas.length,
     planejadas: planejadas.length,
@@ -146,7 +149,7 @@ export function proximosPassos(s: Stats): string[] {
   const passos: string[] = [];
   if (s.total === 0) {
     passos.push("Cadastre as oficinas que serão entrevistadas para começar.");
-    passos.push("Monte o roteiro de perguntas na página \"Perguntas\".");
+    passos.push("Revise o roteiro de perguntas antes da primeira entrevista.");
     return passos;
   }
   if (s.realizadas < META_ENTREVISTAS) {

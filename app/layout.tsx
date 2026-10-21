@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
-import SubNav from "@/components/SubNav";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -26,7 +25,6 @@ export default function RootLayout({
           <Nav />
           <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-10">
             <div className="mx-auto w-full max-w-page">
-              <SubNav />
               {children}
             </div>
           </main>

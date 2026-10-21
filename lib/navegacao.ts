@@ -1,53 +1,14 @@
 export type ItemNav = { href: string; label: string };
 export type GrupoNav = ItemNav & { filhos?: ItemNav[] };
 
-// O menu lateral mostra só os grupos. Cada grupo abre as páginas
-// relacionadas como abas dentro da própria página (componente SubNav).
+// Menu principal enxuto: 4 destinos, sem submenus. As páginas que saíram do
+// menu continuam existindo por URL direta, mas não competem com o fluxo
+// principal (registrar entrevista → entender a análise → apresentar).
 export const GRUPOS_NAV: GrupoNav[] = [
   { href: "/", label: "Dashboard" },
-  {
-    href: "/entrevistas",
-    label: "Validação",
-    filhos: [
-      { href: "/entrevistas", label: "Entrevistas" },
-      { href: "/perguntas", label: "Perguntas" },
-      { href: "/respostas", label: "Respostas" },
-    ],
-  },
-  {
-    href: "/analise",
-    label: "Análise",
-    filhos: [
-      { href: "/analise", label: "Análise" },
-      { href: "/graficos", label: "Gráficos" },
-    ],
-  },
-  {
-    href: "/solucoes",
-    label: "Solução",
-    filhos: [
-      { href: "/solucoes", label: "Solução" },
-      { href: "/concorrentes", label: "Concorrentes" },
-      { href: "/vendas", label: "Vendas" },
-    ],
-  },
-  {
-    href: "/pitch",
-    label: "Pitch",
-    filhos: [
-      { href: "/pitch", label: "Pitch" },
-      { href: "/mentoria", label: "Mentoria" },
-      { href: "/descobertas", label: "Descobertas" },
-    ],
-  },
-  {
-    href: "/tarefas",
-    label: "Tarefas",
-    filhos: [
-      { href: "/tarefas", label: "Tarefas" },
-      { href: "/lembretes", label: "Lembretes" },
-    ],
-  },
+  { href: "/entrevistas", label: "Entrevistas" },
+  { href: "/analise", label: "Análise" },
+  { href: "/pitch", label: "Pitch" },
 ];
 
 function alvosDoGrupo(g: GrupoNav): ItemNav[] {

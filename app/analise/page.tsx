@@ -5,7 +5,6 @@ import {
   Bar,
   BarChart,
   Cell,
-  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -16,7 +15,7 @@ import {
 import { apiList } from "@/lib/api";
 import { calcStats, META_ENTREVISTAS, META_PERC_PROBLEMA } from "@/lib/stats";
 import type { Entrevista } from "@/lib/types";
-import { META_CLIENTE, publicoDe } from "@/lib/validacao";
+import { publicoDe } from "@/lib/validacao";
 import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
 import FluxogramaProblema from "@/components/FluxogramaProblema";
 
@@ -31,16 +30,26 @@ const tooltipStyle = {
   color: "#0a0a0a",
 };
 
-const CORES_PROBLEMA = ["#0a0a0a", "#e5e5e5", "#d4d4d4"];
-const CORES_RECUSA = ["#dc2626", "#0a0a0a", "#a3a3a3", "#e5e5e5"];
+const CORES_PROBLEMA = ["#0a0a0a", "#a3a3a3", "#e5e5e5"];
 
 const ROTULOS_RECUSA: Record<string, string> = {
-  sim: "Sim, já perdeu serviço",
+  sim: "Sim",
   nao: "Não",
   incerto: "Incerto",
-  "Não avaliaram o prazo": "Não avaliaram o prazo",
-  "Não informado": "Não informado",
+  "Não avaliaram o prazo": "Não responderam",
+  "Não informado": "Não responderam",
 };
+
+const ROTULOS_PRAZO: Record<string, string> = {
+  sim: "Entende bem",
+  parcial: "Entende em parte",
+  nao: "Não entende",
+  "Não avaliaram o prazo": "Não responderam",
+  "Não informado": "Não responderam",
+};
+
+const pct = (parte: number, total: number) =>
+  total > 0 ? Math.round((parte / total) * 100) : 0;
 
 export default function AnalisePage() {
   const [entrevistas, setEntrevistas] = useState<Entrevista[]>([]);
@@ -64,183 +73,82 @@ export default function AnalisePage() {
     };
   }, []);
 
-  const oficina = useMemo(
-    () => entrevistas.filter((e) => publicoDe(e) === "oficina"),
-    [entrevistas],
-  );
-  const cliente = useMemo(
-    () => entrevistas.filter((e) => publicoDe(e) === "cliente"),
-    [entrevistas],
-  );
+  const reais = useMemo(() => entrevistas.filter((e) => !e.exemplo), [entrevistas]);
+  const exemplos = entrevistas.length - reais.length;
+
+  const oficina = useMemo(() => reais.filter((e) => publicoDe(e) === "oficina"), [reais]);
+  const clientes = useMemo(() => reais.filter((e) => publicoDe(e) === "cliente"), [reais]);
   const stats = useMemo(() => calcStats(oficina), [oficina]);
-  const statsCliente = useMemo(() => calcStats(cliente), [cliente]);
 
-  const dadosProblema = [
-    { nome: "Sim, é problema real", valor: stats.identificaramProblema },
-    {
-      nome: "Não identificou",
-      valor: Math.max(stats.avaliaramProblema - stats.identificaramProblema, 0),
-    },
-    {
-      nome: "Não avaliaram o problema",
-      valor: Math.max(stats.realizadas - stats.avaliaramProblema, 0),
-    },
-  ];
+  const dadosProblema = useMemo(
+    () => [
+      { nome: "Confirmam", valor: stats.identificaramProblema },
+      {
+        nome: "Não confirmam",
+        valor: Math.max(stats.avaliaramProblema - stats.identificaramProblema, 0),
+      },
+      {
+        nome: "Não responderam",
+        valor: Math.max(stats.realizadas - stats.avaliaramProblema, 0),
+      },
+    ],
+    [stats],
+  );
 
-  const dadosRecusa = stats.porRecusa.map((d) => ({
-    nome: ROTULOS_RECUSA[d.faixa] ?? d.faixa,
-    valor: d.total,
-  }));
+  const dadosRecusa = useMemo(
+    () =>
+      stats.porRecusa.map((d) => ({
+        nome: ROTULOS_RECUSA[d.faixa] ?? d.faixa,
+        valor: d.total,
+      })),
+    [stats],
+  );
 
-  const dadosResponsavel = stats.porResponsavel.map((d) => ({
-    nome: d.responsavel,
-    total: d.total,
-  }));
+  const dadosPrazo = useMemo(
+    () =>
+      stats.porClienteEntendePrazos.map((d) => ({
+        nome: ROTULOS_PRAZO[d.faixa] ?? d.faixa,
+        valor: d.total,
+      })),
+    [stats],
+  );
 
   if (carregando) {
     return <PageHeader title="Análise" subtitle="Carregando..." />;
   }
 
   const semDados = stats.realizadas === 0;
+  const faltamEntrevistas = Math.max(META_ENTREVISTAS - stats.realizadas, 0);
+  const faltamPontos = Math.max(META_PERC_PROBLEMA - stats.percIdentificaram, 0);
+  const percRecusa = pct(stats.recusas, stats.realizadas);
 
   return (
     <div>
       <PageHeader
-        title="Análise & Validação"
-        subtitle={`Organização do fluxo e comunicação com o cliente em oficinas automotivas · atualiza automaticamente${atualizadoEm ? ` (última: ${atualizadoEm})` : ""}`}
+        title="Análise"
+        subtitle={`${stats.realizadas} entrevistas com oficinas · ${stats.identificaramProblema} confirmam o problema · atualiza automaticamente${atualizadoEm ? ` (última: ${atualizadoEm})` : ""}`}
+        right={
+          <Badge variant={stats.validado ? "solid" : "outline"}>
+            {stats.validado ? "Problema validado" : semDados ? "Sem dados" : "Em validação"}
+          </Badge>
+        }
       />
 
-      <Card className="mb-6">
+      <Card className="mb-4">
         <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-          Qual é o problema?
+          O problema em uma frase
         </p>
-        <p className="mt-1.5 text-body text-ink-soft">
-          A validação tem dois lados. No lado da oficina,{" "}
-          <strong className="font-semibold text-ink">
-            o check-in e o andamento do serviço ficam na cabeça de quem está na
-            oficina
-          </strong>
-          , sem registro com padrão — o aviso ao cliente só acontece quando ele
-          cobra. No lado do cliente final, a consequência é{" "}
-          <strong className="font-semibold text-ink">
-            ficar sem informação, cobrar, ir à oficina ou desistir do serviço
-          </strong>
-          . A causa está na organização da oficina; a comunicação é o efeito.
+        <p className="mt-2 max-w-4xl text-subheading font-semibold leading-snug text-ink md:text-heading-sm">
+          Oficinas perdem serviço porque o check-in e o andamento do reparo ficam
+          só na cabeça de quem está na oficina — e o cliente só descobre o status
+          quando cobra.
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-              Lado 1 · Oficina (já ouvida)
-            </p>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-soft marker:text-mid-gray">
-              <li>Check-in no papel e informação só verbal.</li>
-              <li>Prazo e orçamento "de cabeça", sem registro.</li>
-              <li>Ninguém é dono do aviso; o mecânico não reporta.</li>
-            </ul>
-            <p className="mt-2 text-caption text-mid-gray">
-              {oficina.length} entrevistas · {stats.percIdentificaram}% confirmam ·
-              meta {META_ENTREVISTAS}
-            </p>
-          </div>
-          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-              Lado 2 · Cliente final (a ouvir)
-            </p>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-soft marker:text-mid-gray">
-              <li>Não sabe o andamento sem ligar ou ir lá.</li>
-              <li>Cobra notícia e nem sempre entende o prazo.</li>
-              <li>Sem informação, desiste ou escolhe outra oficina.</li>
-            </ul>
-            <p className="mt-2 text-caption text-mid-gray">
-              {cliente.length} de {META_CLIENTE} entrevistas com motoristas ·
-              roteiro pronto
-            </p>
-          </div>
-        </div>
-        <p className="mt-3 text-caption font-semibold uppercase tracking-wide text-mid-gray">
-          Sintomas relatados nas entrevistas
+        <p className="mt-3 max-w-3xl text-body text-mid-gray">
+          A causa é a organização da oficina; a falta de comunicação é a
+          consequência. Abaixo estão apenas os números que sustentam essa frase:{" "}
+          {stats.realizadas} entrevistas realizadas, {stats.avaliaramProblema}{" "}
+          responderam à pergunta de validação.
         </p>
-        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-ink-soft marker:text-mid-gray">
-          <li>
-            Mecânico não atualiza nada — só fala quando o cliente manda mensagem
-          </li>
-          <li>
-            Mecânicos fazem tudo na oficina — não sobra tempo para responder no
-            meio do serviço
-          </li>
-          <li>
-            Avisos sem padrão: tem dia que avisa 3 clientes, tem dia que não avisa
-            nenhum
-          </li>
-          <li>
-            Prazo &quot;de cabeça&quot; — nenhum registro estruturado do andamento
-          </li>
-          <li>
-            Orçamento &quot;de cabeça&quot; — valores e aprovações sem registro
-          </li>
-          <li>
-            Defeito adicional: tem que marcar de ir ver para perguntar se pode
-            fazer
-          </li>
-          <li>Check-in no papel</li>
-          <li>
-            Cliente tem que cobrar ou ir à oficina antes de o carro ficar pronto
-          </li>
-        </ul>
-        <p className="mt-3 text-caption text-mid-gray">
-          Critérios de validação: {META_ENTREVISTAS} entrevistas realizadas e{" "}
-          {META_PERC_PROBLEMA}% das oficinas confirmando o problema (maioria
-          qualificada).
-        </p>
-      </Card>
-
-      <Card className="mb-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-ink">
-              O que está firme e o que falta confirmar
-            </h2>
-            <p className="mt-1 text-caption text-mid-gray">
-              Para não misturar evidência com estimativa na apresentação
-            </p>
-          </div>
-          <Badge variant="soft">Transparência</Badge>
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption text-mid-gray">Firme · Oficina</p>
-            <p className="mt-1 text-xl font-semibold text-ink">64%</p>
-            <p className="mt-1 text-caption text-mid-gray">
-              14 de 22 entrevistas completas confirmam o problema
-            </p>
-          </div>
-          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption text-mid-gray">Firme · Oficina</p>
-            <p className="mt-1 text-xl font-semibold text-ink">32%</p>
-            <p className="mt-1 text-caption text-mid-gray">
-              7 de 22 já perderam serviço por prazo
-            </p>
-          </div>
-          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption text-mid-gray">Cliente final</p>
-            <p className="mt-1 text-xl font-semibold text-ink">
-              {cliente.length}/{META_CLIENTE}
-            </p>
-            <p className="mt-1 text-caption text-mid-gray">
-              entrevistas com motoristas · {statsCliente.identificaramProblema}{" "}
-              confirmaram a dor
-            </p>
-          </div>
-          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption text-mid-gray">A confirmar</p>
-            <p className="mt-1 text-sm font-semibold text-ink">
-              91% · 63% · 11% · 36% · 5 de 5
-            </p>
-            <p className="mt-1 text-caption text-mid-gray">
-              ainda precisam ter a base de cálculo confirmada
-            </p>
-          </div>
-        </div>
       </Card>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
@@ -248,286 +156,305 @@ export default function AnalisePage() {
           label="Entrevistas realizadas"
           value={`${stats.realizadas}/${META_ENTREVISTAS}`}
         />
-        <Stat label="Confirmam o problema" value={`${stats.percIdentificaram}%`} />
-        <Stat label="Perderam serviço por prazo" value={String(stats.recusas)} />
         <Stat
-          label="Veredito"
-          value={stats.validado ? "Validado" : semDados ? "—" : "Em validação"}
+          label="Confirmam o problema"
+          value={`${stats.percIdentificaram}%`}
         />
+        <Stat label="Perderam serviço por prazo" value={String(stats.recusas)} />
+        <Stat label="Indicações obtidas" value={String(stats.indicacoes)} />
       </div>
 
-      <Card className="mt-6">
-        <h2 className="mb-1 text-sm font-semibold text-ink">
-          Estamos conseguindo validar?
-        </h2>
-        <p className="mb-4 text-caption text-mid-gray">
-          Progresso até a meta de {META_ENTREVISTAS} entrevistas
-        </p>
-        <div className="h-2.5 w-full overflow-hidden rounded-full bg-canvas">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{
-              width: `${stats.percMeta}%`,
-              background: stats.validado ? "#15803d" : "#0a0a0a",
-            }}
-          />
+      <Card className="mt-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold text-ink">Critérios de validação</h2>
+          <p className="text-caption text-mid-gray">
+            meta: {META_ENTREVISTAS} entrevistas + {META_PERC_PROBLEMA}% de confirmação
+          </p>
         </div>
-        <p className="mt-3 text-sm text-ink-soft">
-          {stats.realizadas} de {META_ENTREVISTAS} entrevistas ·{" "}
+
+        <div className="mt-4 space-y-4">
+          <div>
+            <div className="flex items-baseline justify-between gap-2 text-sm">
+              <span className="text-ink-soft">Entrevistas realizadas</span>
+              <span className="font-medium text-ink">
+                {stats.realizadas}/{META_ENTREVISTAS}
+              </span>
+            </div>
+            <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-canvas">
+              <div
+                className="h-full rounded-full bg-ink transition-all"
+                style={{ width: `${stats.percMeta}%` }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-baseline justify-between gap-2 text-sm">
+              <span className="text-ink-soft">Confirmam o problema</span>
+              <span className="font-medium text-ink">
+                {stats.identificaramProblema} de {stats.avaliaramProblema} ·{" "}
+                {stats.percIdentificaram}%
+              </span>
+            </div>
+            <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-canvas">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(stats.percIdentificaram, 100)}%`,
+                  background: stats.validado ? "#15803d" : "#0a0a0a",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm text-ink-soft">
           {stats.validado ? (
-            <span className="font-medium text-ink">
-              problema validado: {stats.percIdentificaram}% das oficinas confirmam a
-              dificuldade com o prazo.
-            </span>
+            <>
+              Critérios atingidos: {stats.realizadas} entrevistas e{" "}
+              {stats.percIdentificaram}% de confirmação. As{" "}
+              {Math.max(stats.realizadas - stats.avaliaramProblema, 0)} entrevistas
+              que não responderam ao critério ficam fora do percentual.
+            </>
           ) : (
-            `faltam ${Math.max(META_ENTREVISTAS - stats.realizadas, 0)} entrevista(s) e/ou confirmação de ${META_PERC_PROBLEMA}% para validar.`
+            <>
+              {faltamEntrevistas > 0 && (
+                <>Faltam {faltamEntrevistas} entrevista(s). </>
+              )}
+              {faltamPontos > 0 && (
+                <>Faltam {faltamPontos} ponto(s) percentual(is) de confirmação. </>
+              )}
+              O percentual considera só quem respondeu ao critério (
+              {stats.avaliaramProblema} de {stats.realizadas}).
+            </>
           )}
         </p>
-        <p className="mt-1 text-caption text-mid-gray">
-          Das {stats.realizadas} entrevistas realizadas, {stats.avaliaramProblema}{" "}
-          responderam sobre o problema de prazo; as{" "}
-          {Math.max(stats.realizadas - stats.avaliaramProblema, 0)} demais focaram
-          outros temas (ex.: check-in e retrabalho) e aparecem como "Não avaliaram"
-          nos gráficos. Os percentuais consideram quem avaliou o problema.
-        </p>
       </Card>
 
-      <Card className="mt-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-ink">
-              Validação · Cliente final
-            </h2>
-            <p className="mt-1 text-caption text-mid-gray">
-              O lado de quem recebe o acompanhamento por QR code
-            </p>
-          </div>
-          <Badge variant={cliente.length >= META_CLIENTE ? "solid" : "outline"}>
-            {cliente.length >= META_CLIENTE ? "Validado" : "A iniciar"}
-          </Badge>
-        </div>
-        <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-canvas">
-          <div
-            className="h-full rounded-full bg-mid-gray transition-all"
-            style={{
-              width: `${Math.min(
-                Math.round((cliente.length / META_CLIENTE) * 100),
-                100,
-              )}%`,
-            }}
-          />
-        </div>
-        <p className="mt-3 text-sm text-ink-soft">
-          {cliente.length} de {META_CLIENTE} entrevistas com motoristas ·{" "}
-          {statsCliente.identificaramProblema} confirmaram a falta de informação ·{" "}
-          {statsCliente.recusas} já desistiram ou recusaram serviço.
+      <div className="mt-10">
+        <h2 className="text-heading-sm font-semibold text-ink md:text-heading">
+          Prova principal
+        </h2>
+        <p className="mb-4 mt-1.5 text-body text-mid-gray">
+          Cada gráfico mostra a base de cálculo — nada de percentual solto.
         </p>
-        <p className="mt-1 text-caption text-mid-gray">
-          O roteiro do cliente final (problema e solução) está na página{" "}
-          <a href="/perguntas" className="underline underline-offset-2">
-            Perguntas
-          </a>
-          , e as respostas na página{" "}
-          <a href="/respostas" className="underline underline-offset-2">
-            Respostas
-          </a>
-          .
-        </p>
-      </Card>
 
-      {semDados ? (
-        <div className="mt-6">
+        {semDados ? (
           <EmptyState>
-            Nenhuma entrevista realizada ainda. Cadastre as oficinas e registre as
-            respostas para gerar os gráficos.
+            Nenhuma entrevista realizada ainda. Registre as oficinas para gerar os
+            gráficos.
           </EmptyState>
-        </div>
-      ) : (
-        <>
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-ink">
-                É um problema real? (oficinas que confirmam)
-              </h2>
-              <div className="h-64">
+              <h3 className="text-sm font-semibold text-ink">
+                O problema é real para a oficina?
+              </h3>
+              <p className="mt-1 text-caption text-mid-gray">
+                Base: {stats.avaliaramProblema} entrevistas que responderam ·{" "}
+                {stats.percIdentificaram}% confirmam
+              </p>
+              <div className="mt-3 h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={dadosProblema}
                       dataKey="valor"
                       nameKey="nome"
-                      outerRadius={85}
-                      label={{ fill: "#737373", fontSize: 12 }}
+                      innerRadius={52}
+                      outerRadius={86}
+                      paddingAngle={2}
+                      label={(d: { name?: string; value?: number }) =>
+                        `${d.name}: ${d.value}`
+                      }
+                      labelLine={false}
                     >
                       {dadosProblema.map((d, i) => (
                         <Cell key={d.nome} fill={CORES_PROBLEMA[i]} />
                       ))}
                     </Pie>
-                    <Legend
-                      wrapperStyle={{ fontSize: 12, color: "#737373" }}
-                      iconType="circle"
-                    />
                     <Tooltip contentStyle={tooltipStyle} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
+              <p className="text-caption text-mid-gray">
+                {stats.identificaramProblema} confirmam ·{" "}
+                {Math.max(stats.avaliaramProblema - stats.identificaramProblema, 0)}{" "}
+                não confirmam ·{" "}
+                {Math.max(stats.realizadas - stats.avaliaramProblema, 0)} não
+                responderam
+              </p>
             </Card>
 
             <Card>
-              <h2 className="mb-4 text-sm font-semibold text-ink">
-                Já recusou serviço por não entender o prazo?
-              </h2>
-              <div className="h-64">
+              <h3 className="text-sm font-semibold text-ink">
+                Já perdeu serviço por causa do prazo?
+              </h3>
+              <p className="mt-1 text-caption text-mid-gray">
+                Base: {stats.realizadas} entrevistas · {stats.recusas} já perderam
+                serviço ({percRecusa}%)
+              </p>
+              <div className="mt-3 h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dadosRecusa}>
-                    <XAxis
-                      dataKey="nome"
-                      tickLine={false}
-                      axisLine={{ stroke: "#e5e5e5" }}
-                      tick={tickStyle}
-                    />
+                  <BarChart data={dadosRecusa} layout="vertical" margin={{ left: 8 }}>
+                    <XAxis type="number" allowDecimals={false} tick={tickStyle} axisLine={false} tickLine={false} />
                     <YAxis
-                      allowDecimals={false}
-                      width={28}
-                      tickLine={false}
-                      axisLine={false}
+                      type="category"
+                      dataKey="nome"
+                      width={108}
                       tick={tickStyle}
+                      axisLine={false}
+                      tickLine={false}
                     />
                     <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
-                    <Bar dataKey="valor" radius={[6, 6, 0, 0]}>
-                      {dadosRecusa.map((d, i) => (
-                        <Cell key={d.nome} fill={CORES_RECUSA[i % CORES_RECUSA.length]} />
-                      ))}
-                    </Bar>
+                    <Bar dataKey="valor" fill="#0a0a0a" radius={[0, 6, 6, 0]} barSize={22} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </Card>
-
-            <Card>
-              <h2 className="mb-4 text-sm font-semibold text-ink">
-                Entrevistas por responsável
-              </h2>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dadosResponsavel}>
-                    <XAxis
-                      dataKey="nome"
-                      tickLine={false}
-                      axisLine={{ stroke: "#e5e5e5" }}
-                      tick={tickStyle}
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      width={28}
-                      tickLine={false}
-                      axisLine={false}
-                      tick={tickStyle}
-                    />
-                    <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
-                    <Bar dataKey="total" fill="#0a0a0a" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </div>
-
-          <div className="mt-6 grid gap-4 lg:grid-cols-3">
-            <Card>
-              <h3 className="text-sm font-semibold text-ink">Leitura dos dados</h3>
-              <ul className="mt-2 space-y-2 text-sm text-ink-soft">
-                <li>
-                  <Badge variant="solid">{stats.percIdentificaram}%</Badge> das oficinas
-                  confirmam o problema de prazo/comunicação.
-                </li>
-                <li>
-                  <Badge variant="outline">{stats.recusas}</Badge> oficinas já perderam
-                  serviço por causa disso.
-                </li>
-                <li>
-                  <Badge variant="soft">{stats.indicacoes}</Badge> indicações obtidas
-                  para ampliar a amostra.
-                </li>
-              </ul>
-            </Card>
-            <Card className="lg:col-span-2">
-              <h3 className="text-sm font-semibold text-ink">O que isso indica</h3>
-              <p className="mt-2 text-sm text-ink-soft">
-                {stats.validado
-                  ? `A maioria das oficinas (${stats.percIdentificaram}%) confirma o problema, e ${stats.recusas} já perderam serviço por causa dele — sinal de que o problema é real. Mas não é unânime: parte das oficinas não confirma, seja porque comunica bem (e o cliente entende), seja porque aponta outro problema mais urgente (mão de obra, custo de peças). Dados do setor (J.D. Power) reforçam o padrão: atrasos são comuns e a satisfação do cliente depende de mantê-lo informado. O próximo passo é organizar o check-in e o andamento — a comunicação com o cliente vem como consequência.`
-                  : "A amostra ou o percentual de confirmação ainda não atingem os critérios. Continue entrevistando oficinas e registrando as respostas para decidir com segurança se o problema é real."}
-              </p>
-              <p className="mt-2 text-caption text-mid-gray">
-                Referências de setor (pesquisas online 2025/2026): J.D. Power CSI —
-                12% dos reparos falham na 1ª visita (28% por peça indisponível;
-                comunicação está entre os 4 indicadores mais importantes de
-                satisfação); no Brasil, IQA/Ipsos (out/2026): 53% da manutenção é em
-                oficina independente e a confiança pesa mais que o preço (33% × 8%).
+              <p className="text-caption text-mid-gray">
+                {stats.recusas} sim ·{" "}
+                {stats.porRecusa.find((d) => d.faixa === "nao")?.total ?? 0} não ·{" "}
+                {stats.porRecusa.find((d) => d.faixa === "incerto")?.total ?? 0}{" "}
+                incerto
               </p>
             </Card>
           </div>
-        </>
-      )}
-
-      <div className="mt-10">
-        <h2 className="text-heading-sm font-semibold text-ink md:text-heading">
-          Fluxograma do problema
-        </h2>
-        <p className="mb-4 mt-1.5 text-body text-mid-gray">
-          Como o atraso sem comunicação leva o cliente à recusa do serviço
-        </p>
-        <Card>
-          <FluxogramaProblema />
-        </Card>
+        )}
       </div>
 
-      <div className="mt-10">
-        <h2 className="text-heading-sm font-semibold text-ink md:text-heading">
-          Espinha de peixe (causa raiz)
-        </h2>
-        <p className="mb-4 mt-1.5 text-body text-mid-gray">
-          Análise de causa raiz · oficinas mecânicas — falta de organização para
-          atualizar o cliente
-        </p>
-        <Card>
-          <img
-            src="/diagramas/oficina.svg"
-            alt="Diagrama de espinha de peixe: causas da falta de organização para atualizar o cliente nas oficinas mecânicas"
-            className="w-full rounded-inputs border border-hairline bg-paper"
-          />
-          <div className="mt-4 flex flex-wrap gap-2">
-            <a
-              className="inline-flex h-9 items-center rounded-buttons bg-ink px-3 text-sm font-medium text-[#fafafa] hover:bg-ink-soft"
-              href="/diagramas/oficina.svg"
-              download
-            >
-              Baixar SVG
-            </a>
-            <a
-              className="inline-flex h-9 items-center rounded-buttons border border-hairline px-3 text-sm font-medium text-ink hover:bg-canvas"
-              href="/diagramas/oficina.png"
-              download
-            >
-              Baixar PNG
-            </a>
-          </div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              ["Processo", "Checklist sem atualização · sem momento definido · informação só verbal · sem padrão de follow-up"],
-              ["Equipe", "Mecânico não reporta · ninguém é dono do contato · recepção sobrecarregada · sem treino de atendimento"],
-              ["Sistemas", "Sem sistema de status · dados em papel e WhatsApp · sem alertas automáticos · sistema pouco prático"],
-              ["Prazos", "Estimativa otimista · reprogramação não avisada · sem meta de resposta · espera de peças sem data"],
-              ["Peças & terceiros", "Fornecedor não avisa atraso · sem rastreio do pedido · terceirizado sem retorno · peça errada sem aviso"],
-              ["Cliente & canais", "Não sabe com quem falar · telefone nunca atende · avisos só quando cobram · contato desatualizado"],
-            ].map(([titulo, itens]) => (
-              <div key={titulo} className="rounded-cards border border-hairline bg-surface-alt p-3">
-                <p className="text-sm font-semibold text-ink">{titulo}</p>
-                <p className="mt-1 text-caption text-ink-soft">{itens}</p>
+      {!semDados && (
+        <Card className="mt-4">
+          <h3 className="text-sm font-semibold text-ink">
+            O cliente entende o prazo?
+          </h3>
+          <p className="mt-1 text-caption text-mid-gray">
+            Pergunta feita dentro da entrevista com a oficina · base:{" "}
+            {stats.realizadas}
+          </p>
+          <ul className="mt-4 space-y-2.5">
+            {dadosPrazo.map((d) => (
+              <li key={d.nome} className="flex items-center gap-3 text-sm">
+                <span className="w-32 shrink-0 text-ink-soft">{d.nome}</span>
+                <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-canvas">
+                  <span
+                    className="block h-full rounded-full bg-ink"
+                    style={{ width: `${pct(d.valor, stats.realizadas)}%` }}
+                  />
+                </span>
+                <span className="w-16 shrink-0 text-right text-ink">
+                  {d.valor} ({pct(d.valor, stats.realizadas)}%)
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <details className="group mt-10 rounded-cards border border-hairline bg-paper p-5">
+        <summary className="cursor-pointer list-none text-sm font-semibold text-ink">
+          Detalhes da validação (perfil da amostra, sintomas e causa raiz)
+          <span className="ml-2 text-caption font-normal text-mid-gray">
+            clique para abrir
+          </span>
+        </summary>
+
+        <div className="mt-5 space-y-6">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {stats.porPorte.map((p) => (
+              <div
+                key={p.porte}
+                className="rounded-cards border border-hairline bg-surface-alt p-3"
+              >
+                <p className="text-caption text-mid-gray">{p.porte}</p>
+                <p className="mt-1 text-xl font-semibold text-ink">{p.total}</p>
               </div>
             ))}
           </div>
-        </Card>
-      </div>
+
+          <div>
+            <p className="text-sm font-semibold text-ink">Quem entrevistou</p>
+            <p className="mt-1 text-sm text-ink-soft">
+              {stats.porResponsavel
+                .map((r) => `${r.responsavel} (${r.total})`)
+                .join(" · ")}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-ink">Sintomas relatados</p>
+            <ul className="mt-2 grid gap-1.5 text-sm text-ink-soft sm:grid-cols-2">
+              {[
+                "Mecânico não atualiza nada — só fala quando o cliente cobra",
+                "Mecânicos fazem tudo na oficina; não sobra tempo para responder",
+                "Avisos sem padrão: tem dia que avisa 3 clientes, tem dia que não avisa nenhum",
+                "Prazo e orçamento “de cabeça”, sem registro estruturado",
+                "Check-in no papel e informação só verbal",
+                "Cliente precisa cobrar ou ir à oficina antes de o carro ficar pronto",
+              ].map((s) => (
+                <li key={s} className="list-disc pl-1 marker:text-mid-gray">
+                  {s}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-ink">Lacuna da amostra</p>
+            <p className="mt-1 text-sm text-ink-soft">
+              {clientes.length} de 10 entrevistas com clientes finais. O lado de
+              quem recebe o aviso ainda não foi ouvido.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-ink">Fluxograma do problema</p>
+            <p className="mb-3 mt-1 text-caption text-mid-gray">
+              Como o atraso sem comunicação leva o cliente à recusa do serviço
+            </p>
+            <Card>
+              <FluxogramaProblema />
+            </Card>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-ink">
+              Espinha de peixe (causa raiz)
+            </p>
+            <p className="mb-3 mt-1 text-caption text-mid-gray">
+              Falta de organização para atualizar o cliente
+            </p>
+            <Card>
+              <img
+                src="/diagramas/oficina.svg"
+                alt="Diagrama de espinha de peixe: causas da falta de organização para atualizar o cliente nas oficinas mecânicas"
+                className="w-full rounded-inputs border border-hairline bg-paper"
+              />
+              <div className="mt-4 flex flex-wrap gap-2">
+                <a
+                  className="inline-flex h-9 items-center rounded-buttons bg-ink px-3 text-sm font-medium text-[#fafafa] hover:bg-ink-soft"
+                  href="/diagramas/oficina.svg"
+                  download
+                >
+                  Baixar SVG
+                </a>
+                <a
+                  className="inline-flex h-9 items-center rounded-buttons border border-hairline px-3 text-sm font-medium text-ink hover:bg-canvas"
+                  href="/diagramas/oficina.png"
+                  download
+                >
+                  Baixar PNG
+                </a>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </details>
+
+      {exemplos > 0 && (
+        <p className="mt-6 text-caption text-mid-gray">
+          {exemplos} entrevistas de demonstração ficaram fora de todos os números.
+        </p>
+      )}
     </div>
   );
 }

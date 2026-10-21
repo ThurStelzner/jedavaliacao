@@ -2,40 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  Bar,
-  BarChart,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { apiList } from "@/lib/api";
-import { calcStats, META_ENTREVISTAS, META_PERC_PROBLEMA, proximosPassos } from "@/lib/stats";
+import {
+  calcStats,
+  META_ENTREVISTAS,
+  META_PERC_PROBLEMA,
+  proximosPassos,
+} from "@/lib/stats";
 import type { Entrevista, Lembrete, Tarefa } from "@/lib/types";
-import { META_CLIENTE, publicoDe } from "@/lib/validacao";
+import { publicoDe } from "@/lib/validacao";
 import { Badge, Card, EmptyState, PageHeader, Stat } from "@/components/ui";
-
-const CORES_STATUS: Record<string, string> = {
-  planejada: "#a3a3a3",
-  agendada: "#737373",
-  realizada: "#0a0a0a",
-};
-
-const tickStyle = { fill: "#737373", fontSize: 12 };
-const tooltipStyle = {
-  background: "#ffffff",
-  border: "1px solid #e5e5e5",
-  borderRadius: "10px",
-  boxShadow:
-    "0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)",
-  fontSize: 12,
-  color: "#0a0a0a",
-};
 
 export default function DashboardPage() {
   const [entrevistas, setEntrevistas] = useState<Entrevista[]>([]);
@@ -67,37 +43,19 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const oficina = useMemo(
-    () => entrevistas.filter((e) => publicoDe(e) === "oficina"),
-    [entrevistas],
-  );
-  const cliente = useMemo(
-    () => entrevistas.filter((e) => publicoDe(e) === "cliente"),
-    [entrevistas],
-  );
+  const reais = useMemo(() => entrevistas.filter((e) => !e.exemplo), [entrevistas]);
+  const oficina = useMemo(() => reais.filter((e) => publicoDe(e) === "oficina"), [reais]);
+  const clientes = useMemo(() => reais.filter((e) => publicoDe(e) === "cliente"), [reais]);
   const stats = useMemo(() => calcStats(oficina), [oficina]);
-  const statsCliente = useMemo(() => calcStats(cliente), [cliente]);
-  const passos = useMemo(() => proximosPassos(stats), [stats]);
+  const passos = useMemo(() => proximosPassos(stats).slice(0, 4), [stats]);
 
-  const tarefasPendentes = tarefas.filter((t) => t.status !== "concluida").length;
+  const tarefasAbertas = tarefas
+    .filter((t) => t.status !== "concluida")
+    .sort((a, b) => {
+      const peso = { alta: 0, media: 1, baixa: 2 } as const;
+      return peso[a.prioridade] - peso[b.prioridade];
+    });
   const lembretesAtivos = lembretes.filter((l) => l.ativo);
-
-  const dadosStatus = stats.porStatus.map((s) => ({
-    nome: s.status,
-    total: s.total,
-  }));
-
-  const dadosProblema = [
-    { nome: "Identificou o problema", valor: stats.identificaramProblema },
-    {
-      nome: "Não identificou",
-      valor: Math.max(stats.avaliaramProblema - stats.identificaramProblema, 0),
-    },
-    {
-      nome: "Não avaliaram o problema",
-      valor: Math.max(stats.realizadas - stats.avaliaramProblema, 0),
-    },
-  ];
 
   if (carregando) {
     return <PageHeader title="Dashboard" subtitle="Carregando..." />;
@@ -107,221 +65,152 @@ export default function DashboardPage() {
     <div>
       <PageHeader
         title="Dashboard"
-        subtitle={`Visão geral da validação · ${stats.realizadas} oficina(s) · ${cliente.length} cliente(s) final(is) · atualiza automaticamente${atualizadoEm ? ` (última: ${atualizadoEm})` : ""}`}
+        subtitle={`Validação do problema com oficinas mecânicas · atualiza automaticamente${atualizadoEm ? ` (última: ${atualizadoEm})` : ""}`}
+        right={
+          <Badge variant={stats.validado ? "solid" : "outline"}>
+            {stats.validado ? "Problema validado" : "Em validação"}
+          </Badge>
+        }
       />
 
-      <Card className="mb-6">
-        <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-          Qual é o problema?
+      <Card className="mb-4">
+        <p className="max-w-4xl text-subheading font-semibold leading-snug text-ink md:text-heading-sm">
+          Oficinas perdem serviço porque o check-in e o andamento do reparo ficam
+          só na cabeça de quem está na oficina — e o cliente só descobre o status
+          quando cobra.
         </p>
-        <p className="mt-1.5 text-body text-ink-soft">
-          Oficinas mecânicas perdem organização no dia a dia: o check-in e o
-          andamento do serviço ficam na cabeça de quem está na oficina, e o aviso
-          ao cliente só acontece quando ele cobra. O cliente final, sem
-          informação, liga, reclama ou desiste — e a oficina perde tempo e
-          serviço. A causa está na organização da oficina; a comunicação com o
-          cliente é a consequência.
-        </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-              Lado 1 · Oficina
-            </p>
-            <p className="mt-1 text-sm text-ink-soft">
-              {stats.percIdentificaram}% ({stats.identificaramProblema} de{" "}
-              {stats.avaliaramProblema}) confirmam o problema em {stats.realizadas}{" "}
-              entrevistas · {stats.recusas} já perderam serviço por prazo.
-            </p>
-          </div>
-          <div className="rounded-cards border border-hairline bg-surface-alt p-3">
-            <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-              Lado 2 · Cliente final
-            </p>
-            <p className="mt-1 text-sm text-ink-soft">
-              {cliente.length} de {META_CLIENTE} entrevistas feitas ·{" "}
-              {statsCliente.percIdentificaram}% ({statsCliente.identificaramProblema}{" "}
-              de {statsCliente.avaliaramProblema}) confirmam a falta de informação
-              · {statsCliente.recusas} já desistiram ou recusaram serviço.
-            </p>
-          </div>
-        </div>
-        <p className="mt-2 text-caption text-mid-gray">
-          A solução proposta está na página{" "}
-          <Link href="/solucoes" className="underline underline-offset-2">
-            Solução
+        <p className="mt-2 max-w-3xl text-sm text-mid-gray">
+          A causa é a organização da oficina; a falta de comunicação é a
+          consequência.{" "}
+          <Link
+            href="/analise"
+            className="font-medium text-ink underline underline-offset-2"
+          >
+            Ver a análise completa
           </Link>
-          . Os números de 91%, 63%, 11% e 36%, e o &quot;5 de 5&quot;, ainda
-          precisam ter a base confirmada.
+          .
         </p>
       </Card>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <Stat
           label="Entrevistas realizadas"
-          value={`${stats.realizadas}/${stats.total}`}
+          value={`${stats.realizadas}/${META_ENTREVISTAS}`}
         />
-        <Stat label="Oficinas entrevistadas" value={String(stats.realizadas)} />
         <Stat
-          label="Serviços recusados por prazo"
-          value={String(stats.recusas)}
+          label="Confirmam o problema"
+          value={`${stats.percIdentificaram}%`}
         />
-        <Stat label="Indicações obtidas" value={String(stats.indicacoes)} />
-        <Stat label="Identificaram o problema" value={`${stats.percIdentificaram}%`} />
-        <Stat label="Clientes finais ouvidos" value={`${cliente.length}/${META_CLIENTE}`} />
-        <Stat label="Apontaram outro problema" value={`${stats.percOutroProblema}%`} />
-        <Stat label="Tarefas pendentes" value={String(tarefasPendentes)} />
+        <Stat label="Perderam serviço por prazo" value={String(stats.recusas)} />
+        <Stat label="Tarefas abertas" value={String(tarefasAbertas.length)} />
       </div>
+
+      <Card className="mt-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <p className="text-sm font-semibold text-ink">
+            Onde estamos na validação
+          </p>
+          <p className="text-caption text-mid-gray">
+            meta: {META_ENTREVISTAS} entrevistas + {META_PERC_PROBLEMA}% de confirmação
+          </p>
+        </div>
+        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-canvas">
+          <div
+            className="h-full rounded-full bg-ink transition-all"
+            style={{ width: `${stats.percMeta}%` }}
+          />
+        </div>
+        <p className="mt-2 text-sm text-ink-soft">
+          {stats.realizadas} de {META_ENTREVISTAS} entrevistas ·{" "}
+          {stats.identificaramProblema} de {stats.avaliaramProblema} confirmam (
+          {stats.percIdentificaram}%) · {clientes.length} de 10 clientes finais
+          ouvidos
+        </p>
+      </Card>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-1 text-sm font-semibold text-ink">
-            Validação · Oficina
-          </h2>
-          <p className="mb-4 text-caption text-mid-gray">
-            Meta: {META_ENTREVISTAS} entrevistas e {META_PERC_PROBLEMA}% confirmando o
-            problema
-          </p>
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-canvas">
-            <div
-              className="h-full rounded-full bg-ink transition-all"
-              style={{ width: `${stats.percMeta}%` }}
-            />
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 className="text-sm font-semibold text-ink">Próximos passos</h2>
+            <Link
+              href="/analise"
+              className="text-caption text-mid-gray underline underline-offset-2 hover:text-ink"
+            >
+              detalhes
+            </Link>
           </div>
-          <p className="mt-3 text-sm text-ink-soft">
-            {stats.realizadas} de {META_ENTREVISTAS} entrevistas ({stats.percMeta}% da
-            meta) ·{" "}
-            {stats.validado ? (
-              <span className="font-medium text-ink">problema validado ✓</span>
-            ) : (
-              "ainda em validação"
-            )}
-          </p>
-          <div className="mt-4 border-t border-hairline pt-3">
-            <p className="text-caption font-semibold uppercase tracking-wide text-mid-gray">
-              Lado 2 · Cliente final
-            </p>
-            <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-canvas">
-              <div
-                className="h-full rounded-full bg-mid-gray transition-all"
-                style={{
-                  width: `${Math.min(
-                    Math.round((cliente.length / META_CLIENTE) * 100),
-                    100,
-                  )}%`,
-                }}
-              />
+          {passos.length === 0 ? (
+            <div className="mt-3">
+              <EmptyState>Nada pendente por aqui.</EmptyState>
             </div>
-            <p className="mt-2 text-sm text-ink-soft">
-              {cliente.length} de {META_CLIENTE} entrevistas com motoristas ·{" "}
-              {statsCliente.identificaramProblema} confirmaram a dor
-            </p>
-          </div>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dadosStatus}>
-                <XAxis
-                  dataKey="nome"
-                  tickLine={false}
-                  axisLine={{ stroke: "#e5e5e5" }}
-                  tick={tickStyle}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  width={28}
-                  tickLine={false}
-                  axisLine={false}
-                  tick={tickStyle}
-                />
-                <Tooltip cursor={{ fill: "#f5f5f5" }} contentStyle={tooltipStyle} />
-                <Bar dataKey="total" radius={[6, 6, 0, 0]}>
-                  {dadosStatus.map((s) => (
-                    <Cell key={s.nome} fill={CORES_STATUS[s.nome] ?? "#737373"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        <Card>
-          <h2 className="mb-4 text-sm font-semibold text-ink">
-            Oficina: o problema foi identificado?
-          </h2>
-          {stats.realizadas === 0 ? (
-            <EmptyState>Sem entrevistas realizadas ainda.</EmptyState>
           ) : (
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={dadosProblema}
-                    dataKey="valor"
-                    nameKey="nome"
-                    outerRadius={80}
-                    label={{
-                      fill: "#737373",
-                      fontSize: 12,
-                    }}
-                  >
-                    <Cell fill="#0a0a0a" />
-                    <Cell fill="#e5e5e5" />
-                    <Cell fill="#d4d4d4" />
-                  </Pie>
-                  <Legend
-                    wrapperStyle={{ fontSize: 12, color: "#737373" }}
-                    iconType="circle"
-                  />
-                  <Tooltip contentStyle={tooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-ink-soft marker:text-mid-gray">
+              {passos.map((p, i) => (
+                <li key={i}>{p}</li>
+              ))}
+            </ol>
           )}
         </Card>
-      </div>
-
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <h2 className="mb-4 text-sm font-semibold text-ink">Próximos passos</h2>
-          <ol className="list-decimal space-y-2 pl-5 text-sm text-ink-soft marker:text-mid-gray">
-            {cliente.length < META_CLIENTE && (
-              <li>
-                Ouvir o cliente final: {cliente.length} de {META_CLIENTE}{" "}
-                entrevistas com motoristas (roteiro na página{" "}
-                <Link href="/perguntas" className="underline underline-offset-2">
-                  Perguntas
-                </Link>
-                ).
-              </li>
-            )}
-            {passos.map((p, i) => (
-              <li key={i}>{p}</li>
-            ))}
-          </ol>
-        </Card>
 
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-ink">
-            Lembretes importantes
-          </h2>
-          {lembretesAtivos.length === 0 ? (
-            <EmptyState>Nenhum lembrete ativo.</EmptyState>
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 className="text-sm font-semibold text-ink">Tarefas em aberto</h2>
+            <Link
+              href="/tarefas"
+              className="text-caption text-mid-gray underline underline-offset-2 hover:text-ink"
+            >
+              todas
+            </Link>
+          </div>
+          {tarefasAbertas.length === 0 ? (
+            <div className="mt-3">
+              <EmptyState>Nenhuma tarefa em aberto.</EmptyState>
+            </div>
           ) : (
-            <ul className="text-sm">
-              {lembretesAtivos.map((l) => (
+            <ul className="mt-3 text-sm">
+              {tarefasAbertas.slice(0, 5).map((t) => (
                 <li
-                  key={l.id}
-                  className="flex items-start gap-3 border-b border-hairline py-2.5 first:pt-0 last:border-0 last:pb-0"
+                  key={t.id}
+                  className="flex items-start gap-3 border-b border-hairline py-2 first:pt-0 last:border-0 last:pb-0"
                 >
-                  <Badge variant={l.tipo === "critico" ? "solid" : "outline"}>
-                    {l.tipo === "critico" ? "Crítico" : "Atenção"}
+                  <Badge variant={t.prioridade === "alta" ? "solid" : "soft"}>
+                    {t.prioridade === "alta"
+                      ? "Alta"
+                      : t.prioridade === "media"
+                        ? "Média"
+                        : "Baixa"}
                   </Badge>
-                  <span className="text-ink-soft">{l.texto}</span>
+                  <span className="text-ink-soft">{t.titulo}</span>
                 </li>
               ))}
             </ul>
           )}
         </Card>
       </div>
+
+      {lembretesAtivos.length > 0 && (
+        <details className="mt-4 rounded-cards border border-hairline bg-paper p-5">
+          <summary className="cursor-pointer list-none text-sm font-semibold text-ink">
+            Lembretes do projeto
+            <span className="ml-2 text-caption font-normal text-mid-gray">
+              {lembretesAtivos.length} ativos
+            </span>
+          </summary>
+          <ul className="mt-4 text-sm">
+            {lembretesAtivos.map((l) => (
+              <li
+                key={l.id}
+                className="flex items-start gap-3 border-b border-hairline py-2 first:pt-0 last:border-0 last:pb-0"
+              >
+                <Badge variant={l.tipo === "critico" ? "solid" : "outline"}>
+                  {l.tipo === "critico" ? "Crítico" : "Atenção"}
+                </Badge>
+                <span className="text-ink-soft">{l.texto}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }
